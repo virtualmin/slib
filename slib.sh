@@ -6,7 +6,7 @@
 # Licensed under the BSD 3 clause license
 # http://github.com/virtualmin/slib
 #--------------------------------------------------------------------------------------------------
-set -e  # Fail on first error
+#set -e  # Fail on first error
 
 # scolors - Color constants
 # canonical source http://github.com/swelljoe/scolors
@@ -301,8 +301,8 @@ run_ok () {
   local cmd="\${1}"
   local msg="${2}"
   local columns=$(tput cols)
-  if [ $columns -ge 80 ]; then
-    columns=80
+  if [ $columns -ge 90 ]; then
+    columns=90
   fi
   COL=$(( ${columns}-${#msg}+${#GREENBG}+${#NORMAL} ))
 
