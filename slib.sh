@@ -82,9 +82,9 @@ SCRIPT_BASE_DIR="$(cd "$( dirname "$0")" && pwd )"
 
 # Determines if we print colors or not
 if [ $(tty -s) ]; then
-    readonly INTERACTIVE_MODE="off"
+    INTERACTIVE_MODE="off"
 else
-    readonly INTERACTIVE_MODE="on"
+    INTERACTIVE_MODE="on"
 fi
 
 #--------------------------------------------------------------------------------------------------
@@ -92,27 +92,20 @@ fi
 if [ "${INTERACTIVE_MODE}" = "off" ]
 then
     # Then we don't care about log colors
-    readonly LOG_DEFAULT_COLOR=""
-    readonly LOG_ERROR_COLOR=""
-    readonly LOG_INFO_COLOR=""
-    readonly LOG_SUCCESS_COLOR=""
-    readonly LOG_WARN_COLOR=""
-    readonly LOG_DEBUG_COLOR=""
+    LOG_DEFAULT_COLOR=""
+    LOG_ERROR_COLOR=""
+    LOG_INFO_COLOR=""
+    LOG_SUCCESS_COLOR=""
+    LOG_WARN_COLOR=""
+    LOG_DEBUG_COLOR=""
 else
-    readonly LOG_DEFAULT_COLOR=$(tput sgr0)
-    readonly LOG_ERROR_COLOR=$(tput setaf 1)
-    readonly LOG_INFO_COLOR=$(tput sgr 0)
-    readonly LOG_SUCCESS_COLOR=$(tput setaf 2)
-    readonly LOG_WARN_COLOR=$(tput setaf 3)
-    readonly LOG_DEBUG_COLOR=$(tput setaf 4)
+    LOG_DEFAULT_COLOR=$(tput sgr0)
+    LOG_ERROR_COLOR=$(tput setaf 1)
+    LOG_INFO_COLOR=$(tput sgr 0)
+    LOG_SUCCESS_COLOR=$(tput setaf 2)
+    LOG_WARN_COLOR=$(tput setaf 3)
+    LOG_DEBUG_COLOR=$(tput setaf 4)
 fi
-
-# Levels for comparing against LOG_LEVEL_STDOUT and LOG_LEVEL_LOG
-readonly LOG_LEVEL_DEBUG=0
-readonly LOG_LEVEL_INFO=1
-readonly LOG_LEVEL_SUCCESS=2
-readonly LOG_LEVEL_WARNING=3
-readonly LOG_LEVEL_ERROR=4
 
 # This function scrubs the output of any control characters used in colorized output
 # It's designed to be piped through with text that needs scrubbing.  The scrubbed
@@ -123,52 +116,59 @@ prepare_log_for_nonterminal() {
 }
 
 log() {
-    local log_text="$1"
-    local log_level="$2"
-    local log_color="$3"
+  local log_text="$1"
+  local log_level="$2"
+  local log_color="$3"
 
-    # Default level to "info"
-    [ -z ${log_level} ] && log_level="INFO";
-    [ -z ${log_color} ] && log_color="${LOG_INFO_COLOR}";
+  # Levels for comparing against LOG_LEVEL_STDOUT and LOG_LEVEL_LOG
+  local LOG_LEVEL_DEBUG=0
+  local LOG_LEVEL_INFO=1
+  local LOG_LEVEL_SUCCESS=2
+  local LOG_LEVEL_WARNING=3
+  local LOG_LEVEL_ERROR=4
 
-    # Validate LOG_LEVEL_STDOUT and LOG_LEVEL_LOG since they'll be eval-ed.
-    case $LOG_LEVEL_STDOUT in
-        DEBUG|INFO|SUCCESS|WARNING|ERROR)
-            break
-            ;;
-        *)
-            LOG_LEVEL_STDOUT=INFO
-            break
-            ;;
-    esac
-    case $LOG_LEVEL_LOG in
-        DEBUG|INFO|SUCCESS|WARNING|ERROR)
-            break
-            ;;
-        *)
-            LOG_LEVEL_LOG=INFO
-            break
-            ;;
-    esac
+  # Default level to "info"
+  [ -z ${log_level} ] && log_level="INFO";
+  [ -z ${log_color} ] && log_color="${LOG_INFO_COLOR}";
 
-    # Check LOG_LEVEL_STDOUT to see if this level of entry goes to STDOUT.
-    # XXX This is the horror that happens when your language doesn't have a hash data struct.
-    eval log_level_int="\$LOG_LEVEL_${log_level}";
-    eval log_level_stdout="\$LOG_LEVEL_${LOG_LEVEL_STDOUT}"
-    if [ $log_level_stdout -le $log_level_int ]; then
-        # STDOUT
-        printf "${log_color}[$(date +"%Y-%m-%d %H:%M:%S %Z")] [${log_level}] ${log_text} ${LOG_DEFAULT_COLOR}\n";
+  # Validate LOG_LEVEL_STDOUT and LOG_LEVEL_LOG since they'll be eval-ed.
+  case $LOG_LEVEL_STDOUT in
+    DEBUG|INFO|SUCCESS|WARNING|ERROR)
+      break
+      ;;
+    *)
+      LOG_LEVEL_STDOUT=INFO
+      break
+      ;;
+  esac
+  case $LOG_LEVEL_LOG in
+    DEBUG|INFO|SUCCESS|WARNING|ERROR)
+      break
+      ;;
+    *)
+      LOG_LEVEL_LOG=INFO
+      break
+      ;;
+  esac
+
+  # Check LOG_LEVEL_STDOUT to see if this level of entry goes to STDOUT.
+  # XXX This is the horror that happens when your language doesn't have a hash data struct.
+  eval log_level_int="\$LOG_LEVEL_${log_level}";
+  eval log_level_stdout="\$LOG_LEVEL_${LOG_LEVEL_STDOUT}"
+  if [ $log_level_stdout -le $log_level_int ]; then
+    # STDOUT
+    printf "${log_color}[$(date +"%Y-%m-%d %H:%M:%S %Z")] [${log_level}] ${log_text} ${LOG_DEFAULT_COLOR}\n";
+  fi
+  eval log_level_log="\$LOG_LEVEL_${LOG_LEVEL_LOG}"
+  # Check LOG_LEVEL_LOG to see if this level of entry goes to LOG_PATH
+  if [ $log_level_log -le $log_level_int ]; then
+    # LOG_PATH minus fancypants colors
+    if [ ! -z $LOG_PATH ]; then
+      printf "[$(date +"%Y-%m-%d %H:%M:%S %Z")] [${log_level}] ${log_text}\n" >> $LOG_PATH;
     fi
-    eval log_level_log="\$LOG_LEVEL_${LOG_LEVEL_LOG}"
-    # Check LOG_LEVEL_LOG to see if this level of entry goes to LOG_PATH
-    if [ $log_level_log -le $log_level_int ]; then
-        # LOG_PATH minus fancypants colors
-        if [ ! -z $LOG_PATH ]; then
-            printf "[$(date +"%Y-%m-%d %H:%M:%S %Z")] [${log_level}] ${log_text}\n" >> $LOG_PATH;
-        fi
-    fi
+  fi
 
-    return 0;
+  return 0;
 }
 
 log_info()      { log "$@"; }
