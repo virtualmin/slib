@@ -278,7 +278,7 @@ shell_has_unicode () {
   env printf "\u2714"> unitest.txt
 
   read unitest < unitest.txt
-  rm unitest.txt
+  rm -f unitest.txt
   if [ ${#unitest} -le 3 ]; then
     return 0
   else
