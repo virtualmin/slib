@@ -78,7 +78,6 @@ SCRIPT_ARGS="$@"
 SCRIPT_NAME="$0"
 SCRIPT_NAME="${SCRIPT_NAME#\./}"
 SCRIPT_NAME="${SCRIPT_NAME##/*/}"
-SCRIPT_BASE_DIR="$(cd "$( dirname "$0")" && pwd )"
 
 # Determines if we print colors or not
 if [ $(tty -s) ]; then
