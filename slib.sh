@@ -133,20 +133,16 @@ log() {
   # Validate LOG_LEVEL_STDOUT and LOG_LEVEL_LOG since they'll be eval-ed.
   case $LOG_LEVEL_STDOUT in
     DEBUG|INFO|SUCCESS|WARNING|ERROR)
-      break
       ;;
     *)
       LOG_LEVEL_STDOUT=INFO
-      break
       ;;
   esac
   case $LOG_LEVEL_LOG in
     DEBUG|INFO|SUCCESS|WARNING|ERROR)
-      break
       ;;
     *)
       LOG_LEVEL_LOG=INFO
-      break
       ;;
   esac
 
