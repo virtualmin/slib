@@ -402,11 +402,11 @@ setconfig () {
 detect_ip () {
   primaryaddr=$(/sbin/ip -f inet -o -d addr show dev \`/sbin/ip ro ls | grep default | awk '{print $5}'\` | head -1 | awk '{print $4}' | cut -d"/" -f1)
   if [ "$primaryaddr" ]; then
-    log_info "Primary address detected as $primaryaddr"
+    log_debug "Primary address detected as $primaryaddr"
     address=$primaryaddr
     return 0
   else
-    log_info "Unable to determine IP address of primary interface."
+    log_warning "Unable to determine IP address of primary interface."
     echo "Please enter the name of your primary network interface: "
     read primaryinterface
     #primaryaddr=`/sbin/ifconfig $primaryinterface|grep 'inet addr'|cut -d: -f2|cut -d" " -f1`
@@ -416,7 +416,7 @@ detect_ip () {
       primaryaddr=$(/sbin/ifconfig "$primaryinterface"|grep 'inet' | awk '{ print $2 }')
     fi
     if [ "$primaryaddr" ]; then
-      log_info "Primary address detected as $primaryaddr"
+      log_debug"Primary address detected as $primaryaddr"
       address=$primaryaddr
     else
       fatal "Unable to determine IP address of selected interface.  Cannot continue."
@@ -437,7 +437,7 @@ set_hostname () {
       line=$forcehostname
     fi
     if ! is_fully_qualified "$line"; then
-      log_info "Hostname $line is not fully qualified."
+      log_warning "Hostname $line is not fully qualified."
     else
       hostname "$line"
       detect_ip
@@ -467,7 +467,7 @@ is_fully_qualified () {
       return 1
       ;;
     *.*)
-      log_success "Hostname OK: fully qualified as $1"
+      log_debug "Hostname OK: fully qualified as $1"
       return 0
       ;;
   esac
