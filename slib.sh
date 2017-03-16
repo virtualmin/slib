@@ -290,7 +290,7 @@ shell_has_unicode () {
 # Setup spinner with our prefs.
 SPINNER_COLORCYCLE=0
 SPINNER_COLORNUM=5
-if shell_has_unicode; ;then
+if shell_has_unicode; then
   SPINNER_SYMBOLS="WIDE_UNI_GREYSCALE"
 else
   SPINNER_SYMBOLS="WIDE_ASCII_PROG"
