@@ -248,7 +248,7 @@ spinner () {
         if [ ${SPINNER_CLEAR} -eq 1 ]; then
           tput el
         fi
-	rm ${SPINNER_DONEFILE}
+	rm -f ${SPINNER_DONEFILE}
 	break 2
       fi
       # This is questionable. sleep with fractional seconds is not
