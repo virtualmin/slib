@@ -481,25 +481,24 @@ get_distro () {
   os=$(uname -o)
   # Make sure we're Linux
   if $(echo $os | grep -iq linux); then
-    if [ -f /etc/os-release ]; then
-      # Source it, so we can check VERSION_ID
-      . /etc/os-release
-      os_major_version=$VERSION_ID
-      # Not technically correct, but os-release does not have 7.xxx for centos
-      os_version=$VERSION_ID
-      os_real=$NAME
-      # os_type=$(echo $NAME | awk -F ' ' '{print $1}' | tr '[:upper:]' '[:lower:]'
-      os_type=$ID
-      return 0
-    elif [ -f /etc/redhat-release ]; then # older RHEL/CentOS
+    if [ -f /etc/redhat-release ]; then # RHEL/CentOS
       local os_string=$(cat /etc/redhat-release)
-      os_real=$(echo $os_string | cut -d' ' -f1)
+      os_real=$(echo $os_string | cut -d' ' -f1) # Doesn't work for Scientific
       os_type=$(echo $os_real | tr '[:upper:]' '[:lower:]')
       os_version=$(echo $os_string | grep -o '[0-9\.]*')
       os_major_version=$(echo ${os_version} | cut -d '.' -f1)
       return 0
+    elif [ -f /etc/os-release ]; then # Debian/Ubuntu
+      # Source it, so we can check VERSION_ID
+      . /etc/os-release
+      # Not technically correct, but os-release does not have 7.xxx for centos
+      os_real=$NAME
+      os_type=$ID
+      os_version=$VERSION_ID
+      os_major_version=$(echo ${os_version} | cut -d'.' -f1)
+      return 0
     else
-      printf "${RED}/etc/os-release file not found.${NORMAL}\n"
+      printf "${RED}No /etc/*-release file found, this OS is probably not supported.${NORMAL}\n"
       return 1
     fi
   else
