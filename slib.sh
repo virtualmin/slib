@@ -17,7 +17,7 @@ if type 'tput' > /dev/null; then
   if [ -t 1 ]; then
     # does the terminal have colors?
     ncolors=$(tput colors)
-    if [ $ncolors -ge 8 ]; then	
+    if [ $ncolors -ge 8 ]; then
       RED=$(tput setaf 1)
       GREEN=$(tput setaf 2)
       YELLOW=$(tput setaf 3)
@@ -32,7 +32,7 @@ if type 'tput' > /dev/null; then
       MAGENTABG=$(tput setab 5)
       CYANBG=$(tput setab 6)
       WHITEBG=$(tput setab 7)
-    
+
       BOLD=$(tput bold)
       UNDERLINE=$(tput smul) # Many terminals don't support this
       NORMAL=$(tput sgr0)
@@ -218,7 +218,7 @@ spinner () {
   local UNI_BOX_BOUNCE="▖ ▘ ▝ ▗"
   local UNI_PIE="◴ ◷ ◶ ◵"
   local UNI_CIRCLE="◐ ◓ ◑ ◒"
-  local UNI_QTR_CIRCLE="◜ ◝ ◞ ◟" 
+  local UNI_QTR_CIRCLE="◜ ◝ ◞ ◟"
 
   # Bigger spinners and progress type bars; takes more space.
   local WIDE_ASCII_PROG="[>----] [=>---] [==>--] [===>-] [====>] [----<] [---<=] [--<==] [-<===] [<====]"
@@ -475,3 +475,35 @@ is_fully_qualified () {
   return 1
 }
 
+# sets up distro version globals os_type, os_version, os_major_version, os_real
+# returns 1 if something fails.
+get_distro () {
+  os=$(uname -o)
+  # Make sure we're Linux
+  if $(echo $os | grep -iq linux); then
+    if [ -f /etc/os-release ]; then
+      # Source it, so we can check VERSION_ID
+      . /etc/os-release
+      os_major_version=$VERSION_ID
+      # Not technically correct, but os-release does not have 7.xxx for centos
+      os_version=$VERSION_ID
+      os_real=$NAME
+      # os_type=$(echo $NAME | awk -F ' ' '{print $1}' | tr '[:upper:]' '[:lower:]'
+      os_type=$ID
+      return 0
+    elif [ -f /etc/redhat-release ]; then # older RHEL/CentOS
+      local os_string=$(cat /etc/redhat-release)
+      os_real=$(echo $os_string | cut -d' ' -f1)
+      os_type=$(echo $os_real | tr '[:upper:]' '[:lower:]')
+      os_version=$(echo $os_string | grep -o '[0-9\.]*')
+      os_major_version=$(echo ${os_version} | cut -d '.' -f1)
+      return 0
+    else
+      printf "${RED}/etc/os-release file not found.${NORMAL}\n"
+      return 1
+    fi
+  else
+    printf "${RED}Failed to detect a supported operating system.${NORMAL}\n"
+    return 1
+  fi
+}
