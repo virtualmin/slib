@@ -225,6 +225,7 @@ spinner () {
   local WIDE_ASCII_PROPELLER="[|####] [#/###] [##-##] [###\\#] [####|] [###\\#] [##-##] [#/###]"
   local WIDE_ASCII_SNEK="[>----] [~>---] [~~>--] [~~~>-] [~~~~>] [----<] [---<~] [--<~~] [-<~~~] [<~~~~]"
   local WIDE_UNI_GREYSCALE="░░░░░░░ ▒░░░░░░ ▒▒░░░░░ ▒▒▒░░░░ ▒▒▒▒░░░ ▒▒▒▒▒░░ ▒▒▒▒▒▒░ ▒▒▒▒▒▒▒ ▒▒▒▒▒▒░ ▒▒▒▒▒░░ ▒▒▒▒░░░ ▒▒▒░░░░ ▒▒░░░░░ ▒░░░░░░ ░░░░░░░"
+  local WIDE_UNI_GREYSCALE2="░░░░░░░ ▒░░░░░░ ▒▒░░░░░ ▒▒▒░░░░ ▒▒▒▒░░░ ▒▒▒▒▒░░ ▒▒▒▒▒▒░ ▒▒▒▒▒▒▒ ░▒▒▒▒▒▒ ░░▒▒▒▒▒ ░░░▒▒▒▒ ░░░░▒▒▒ ░░░░░▒▒ ░░░░░░▒"
 
   local SPINNER_NORMAL=$(tput sgr0)
 
@@ -286,7 +287,7 @@ shell_has_unicode () {
 SPINNER_COLORCYCLE=0
 SPINNER_COLORNUM=5
 if shell_has_unicode; then
-  SPINNER_SYMBOLS="WIDE_UNI_GREYSCALE"
+  SPINNER_SYMBOLS="WIDE_UNI_GREYSCALE2"
 else
   SPINNER_SYMBOLS="WIDE_ASCII_PROG"
 fi
