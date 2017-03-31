@@ -285,7 +285,7 @@ shell_has_unicode () {
 
 # Setup spinner with our prefs.
 SPINNER_COLORCYCLE=0
-SPINNER_COLORNUM=5
+SPINNER_COLORNUM=6
 if shell_has_unicode; then
   SPINNER_SYMBOLS="WIDE_UNI_GREYSCALE2"
 else
