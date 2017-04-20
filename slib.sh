@@ -316,7 +316,7 @@ run_ok () {
   BALLOT_X='\u2718'
   spinner &
   local spinpid=$!
-  eval "${cmd}" >> ${RUN_LOG}
+  eval "${cmd}" 1>> ${RUN_LOG} 2>&1
   local res=$?
   touch stopspinning
   while [ -f stopspinning ]; do
