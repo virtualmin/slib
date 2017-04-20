@@ -17,7 +17,7 @@ if type 'tput' > /dev/null; then
   if [ -t 1 ]; then
     # does the terminal have colors?
     ncolors=$(tput colors)
-    if [ $ncolors -ge 8 ]; then	
+    if [ $ncolors -ge 8 ]; then
       RED=$(tput setaf 1)
       GREEN=$(tput setaf 2)
       YELLOW=$(tput setaf 3)
@@ -32,7 +32,7 @@ if type 'tput' > /dev/null; then
       MAGENTABG=$(tput setab 5)
       CYANBG=$(tput setab 6)
       WHITEBG=$(tput setab 7)
-    
+
       BOLD=$(tput bold)
       UNDERLINE=$(tput smul) # Many terminals don't support this
       NORMAL=$(tput sgr0)
@@ -218,7 +218,7 @@ spinner () {
   local UNI_BOX_BOUNCE="▖ ▘ ▝ ▗"
   local UNI_PIE="◴ ◷ ◶ ◵"
   local UNI_CIRCLE="◐ ◓ ◑ ◒"
-  local UNI_QTR_CIRCLE="◜ ◝ ◞ ◟" 
+  local UNI_QTR_CIRCLE="◜ ◝ ◞ ◟"
 
   # Bigger spinners and progress type bars; takes more space.
   local WIDE_ASCII_PROG="[>----] [=>---] [==>--] [===>-] [====>] [----<] [---<=] [--<==] [-<===] [<====]"
@@ -314,12 +314,18 @@ run_ok () {
   CHECK='\u2714'
   BALLOT_X='\u2718'
   (spinner &)
+  local spinpid=$!
   eval ${cmd} >> ${RUN_LOG}
   local res=$?
   touch stopspinning
   while [ -f stopspinning ]; do
     sleep .2 # It's possible to have a race for stdout and spinner clobbering the next bit
   done
+  # Just in case the spinner survived somehow, kill it.
+  local pidcheck=$(ps -e | grep ${spinpid})
+  if [ "$pidcheck" ]; then
+    kill $spinpid
+  fi
   # Log what we were supposed to be running
   printf "$msg: " >> ${RUN_LOG}
   if shell_has_unicode; then
@@ -330,7 +336,7 @@ run_ok () {
     else
       log_error "Failed with error: ${res}\n"
       env printf "${REDBG}[  ${BALLOT_X}  ]${NORMAL}\n"
-      return $?
+      return ${res}
     fi
   else
     if [ $res -eq 0 ]; then
@@ -340,7 +346,7 @@ run_ok () {
     else
       printf "Failed with error: ${res}\n" >> ${RUN_LOG}
       env printf "${REDBG}[ERROR]${NORMAL}\n"
-      return $?
+      return ${res}
     fi
   fi
 }
@@ -474,4 +480,3 @@ is_fully_qualified () {
   log_warning "Hostname $name is not fully qualified."
   return 1
 }
-
