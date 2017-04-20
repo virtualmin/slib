@@ -314,7 +314,7 @@ run_ok () {
   # Unicode checkmark and x mark for run_ok function
   CHECK='\u2714'
   BALLOT_X='\u2718'
-  (spinner &)
+  spinner &
   local spinpid=$!
   eval ${cmd} >> ${RUN_LOG}
   local res=$?
