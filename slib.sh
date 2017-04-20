@@ -324,7 +324,7 @@ run_ok () {
   done
   # Just in case the spinner survived somehow, kill it.
   local pidcheck=$(ps -e | grep ${spinpid})
-  if [ "$pidcheck" ]; then
+  if [ "${pidcheck}" ]; then
     kill $spinpid
   fi
   # Log what we were supposed to be running
@@ -337,6 +337,10 @@ run_ok () {
     else
       log_error "Failed with error: ${res}\n"
       env printf "${REDBG}[  ${BALLOT_X}  ]${NORMAL}\n"
+      if [ $RUN_ERRORS_FATAL ]; then
+        log_fatal "Something went wrong with the previous command. Exiting."
+        exit 1
+      fi
       return ${res}
     fi
   else
@@ -347,6 +351,10 @@ run_ok () {
     else
       printf "Failed with error: ${res}\n" >> ${RUN_LOG}
       env printf "${REDBG}[ERROR]${NORMAL}\n"
+      if [ $RUN_ERRORS_FATAL ]; then
+        log_fatal "Something went wrong with the previous command. Exiting."
+        exit 1
+      fi
       return ${res}
     fi
   fi
