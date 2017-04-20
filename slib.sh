@@ -299,7 +299,7 @@ run_ok () {
   # Shell is really clumsy with passing strings around.
   # This passes the unexpanded $1 and $2, so subsequent users get the
   # whole thing.
-  local cmd="\${1}"
+  local cmd="${1}"
   local msg="${2}"
   local columns=$(tput cols)
   if [ $columns -ge 90 ]; then
