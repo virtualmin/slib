@@ -302,10 +302,10 @@ run_ok () {
   local cmd="${1}"
   local msg="${2}"
   local columns=$(tput cols)
-  if [ $columns -ge 90 ]; then
-    columns=90
+  if [ $columns -ge 80 ]; then
+    columns=80
   fi
-  COL=$(( ${columns}-${#msg}+${#GREENBG}+${#NORMAL} ))
+  COL=$(( ${columns}-${#msg}+${#GREENBG}+${#NORMAL}-1 ))
 
   printf "%s%${COL}s" "$2"
   # Make sure there some unicode action in the shell; there's no
@@ -338,6 +338,7 @@ run_ok () {
       log_error "Failed with error: ${res}\n"
       env printf "${REDBG}[  ${BALLOT_X}  ]${NORMAL}\n"
       if [ $RUN_ERRORS_FATAL ]; then
+        echo
         log_fatal "Something went wrong with the previous command. Exiting."
         exit 1
       fi
@@ -350,6 +351,7 @@ run_ok () {
       return 0
     else
       printf "Failed with error: ${res}\n" >> ${RUN_LOG}
+      echo
       env printf "${REDBG}[ERROR]${NORMAL}\n"
       if [ $RUN_ERRORS_FATAL ]; then
         log_fatal "Something went wrong with the previous command. Exiting."
