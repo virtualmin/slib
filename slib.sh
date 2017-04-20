@@ -225,6 +225,7 @@ spinner () {
   local WIDE_ASCII_PROPELLER="[|####] [#/###] [##-##] [###\\#] [####|] [###\\#] [##-##] [#/###]"
   local WIDE_ASCII_SNEK="[>----] [~>---] [~~>--] [~~~>-] [~~~~>] [----<] [---<~] [--<~~] [-<~~~] [<~~~~]"
   local WIDE_UNI_GREYSCALE="░░░░░░░ ▒░░░░░░ ▒▒░░░░░ ▒▒▒░░░░ ▒▒▒▒░░░ ▒▒▒▒▒░░ ▒▒▒▒▒▒░ ▒▒▒▒▒▒▒ ▒▒▒▒▒▒░ ▒▒▒▒▒░░ ▒▒▒▒░░░ ▒▒▒░░░░ ▒▒░░░░░ ▒░░░░░░ ░░░░░░░"
+  local WIDE_UNI_GREYSCALE2="░░░░░░░ ▒░░░░░░ ▒▒░░░░░ ▒▒▒░░░░ ▒▒▒▒░░░ ▒▒▒▒▒░░ ▒▒▒▒▒▒░ ▒▒▒▒▒▒▒ ░▒▒▒▒▒▒ ░░▒▒▒▒▒ ░░░▒▒▒▒ ░░░░▒▒▒ ░░░░░▒▒ ░░░░░░▒"
 
   local SPINNER_NORMAL=$(tput sgr0)
 
@@ -284,9 +285,9 @@ shell_has_unicode () {
 
 # Setup spinner with our prefs.
 SPINNER_COLORCYCLE=0
-SPINNER_COLORNUM=5
+SPINNER_COLORNUM=6
 if shell_has_unicode; then
-  SPINNER_SYMBOLS="WIDE_UNI_GREYSCALE"
+  SPINNER_SYMBOLS="WIDE_UNI_GREYSCALE2"
 else
   SPINNER_SYMBOLS="WIDE_ASCII_PROG"
 fi
@@ -479,4 +480,36 @@ is_fully_qualified () {
   esac
   log_warning "Hostname $name is not fully qualified."
   return 1
+}
+
+# sets up distro version globals os_type, os_version, os_major_version, os_real
+# returns 1 if something fails.
+get_distro () {
+  os=$(uname -o)
+  # Make sure we're Linux
+  if $(echo $os | grep -iq linux); then
+    if [ -f /etc/redhat-release ]; then # RHEL/CentOS
+      local os_string=$(cat /etc/redhat-release)
+      os_real=$(echo $os_string | cut -d' ' -f1) # Doesn't work for Scientific
+      os_type=$(echo $os_real | tr '[:upper:]' '[:lower:]')
+      os_version=$(echo $os_string | grep -o '[0-9\.]*')
+      os_major_version=$(echo ${os_version} | cut -d '.' -f1)
+      return 0
+    elif [ -f /etc/os-release ]; then # Debian/Ubuntu
+      # Source it, so we can check VERSION_ID
+      . /etc/os-release
+      # Not technically correct, but os-release does not have 7.xxx for centos
+      os_real=$NAME
+      os_type=$ID
+      os_version=$VERSION_ID
+      os_major_version=$(echo ${os_version} | cut -d'.' -f1)
+      return 0
+    else
+      printf "${RED}No /etc/*-release file found, this OS is probably not supported.${NORMAL}\n"
+      return 1
+    fi
+  else
+    printf "${RED}Failed to detect a supported operating system.${NORMAL}\n"
+    return 1
+  fi
 }
