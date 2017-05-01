@@ -303,9 +303,9 @@ run_ok () {
   local msg="${2}"
   local columns=$(tput cols)
   if [ $columns -ge 80 ]; then
-    columns=80
+    columns=79
   fi
-  COL=$(( ${columns}-${#msg}-1 ))
+  COL=$(( ${columns}-${#msg}-7 ))
 
   printf "%s%${COL}s" "$2"
   # Make sure there some unicode action in the shell; there's no
