@@ -305,7 +305,7 @@ run_ok () {
   if [ $columns -ge 80 ]; then
     columns=80
   fi
-  COL=$(( ${columns}-${#msg}-${#GREENBG}-${#NORMAL}-1 ))
+  COL=$(( ${columns}-${#msg}-1 ))
 
   printf "%s%${COL}s" "$2"
   # Make sure there some unicode action in the shell; there's no
