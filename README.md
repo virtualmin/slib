@@ -1,7 +1,7 @@
 # slib
 Library of POSIX shell functions used by Virtualmin install scripts.
 
-This is a bundle of a bunch of functions used by virtualmin-install (and probably other installers in the future). Some of the bigger, more complex, functions have their own repo ([spinner](/swelljoe/spinner), [slog](/swelljoe/slog), and [run_ok](/swelljoe/run_ok), specifically), and are merged in here periodically. Unless you're building something very similaer to the Virtualmin install script, you make want to pick and choose.
+This is a bundle of a bunch of functions used by virtualmin-install (and probably other installers in the future). Some of the bigger, more complex, functions have their own repo ([spinner](/swelljoe/spinner), [slog](/swelljoe/slog), and [run_ok](/swelljoe/run_ok), specifically), and are merged in here periodically. Unless you're building something very similar to the Virtualmin install script, you make want to pick and choose.
 
 It is tested regularly on bash and dash. Other POSIX-y shells may or may not work.
 
