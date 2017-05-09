@@ -328,7 +328,7 @@ run_ok () {
     kill $spinpid
   fi
   # Log what we were supposed to be running
-  printf "$msg: " >> ${RUN_LOG}
+  printf "${msg}: " >> ${RUN_LOG}
   if shell_has_unicode; then
     if [ $res -eq 0 ]; then
       printf "Success.\n" >> ${RUN_LOG}
