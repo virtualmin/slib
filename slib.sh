@@ -1,4 +1,5 @@
 #!/bin/sh
+# shellcheck disable=SC2059 disable=SC2039 disable=SC2034
 #--------------------------------------------------------------------------------------------------
 # slib - Utility function library for Virtualmin installation scripts
 # Copyright Joe Cooper
@@ -17,7 +18,7 @@ if type 'tput' > /dev/null; then
   if [ -t 1 ]; then
     # does the terminal have colors?
     ncolors=$(tput colors)
-    if [ $ncolors -ge 8 ]; then
+    if [ "$ncolors" -ge 8 ]; then
       RED=$(tput setaf 1)
       GREEN=$(tput setaf 2)
       YELLOW=$(tput setaf 3)
@@ -74,13 +75,13 @@ LOG_LEVEL_STDOUT="INFO"
 LOG_LEVEL_LOG="INFO"
 
 # Useful global variables that users may wish to reference
-SCRIPT_ARGS="$@"
+SCRIPT_ARGS="$*"
 SCRIPT_NAME="$0"
 SCRIPT_NAME="${SCRIPT_NAME#\./}"
 SCRIPT_NAME="${SCRIPT_NAME##/*/}"
 
 # Determines if we print colors or not
-if [ $(tty -s) ]; then
+if [ "$(tty -s)" ]; then
     INTERACTIVE_MODE="off"
 else
     INTERACTIVE_MODE="on"
@@ -127,8 +128,8 @@ log() {
   local LOG_LEVEL_ERROR=4
 
   # Default level to "info"
-  [ -z ${log_level} ] && log_level="INFO";
-  [ -z ${log_color} ] && log_color="${LOG_INFO_COLOR}";
+  [ -z "${log_level}" ] && log_level="INFO";
+  [ -z "${log_color}" ] && log_color="${LOG_INFO_COLOR}";
 
   # Validate LOG_LEVEL_STDOUT and LOG_LEVEL_LOG since they'll be eval-ed.
   case $LOG_LEVEL_STDOUT in
@@ -150,16 +151,19 @@ log() {
   # XXX This is the horror that happens when your language doesn't have a hash data struct.
   eval log_level_int="\$LOG_LEVEL_${log_level}";
   eval log_level_stdout="\$LOG_LEVEL_${LOG_LEVEL_STDOUT}"
-  if [ $log_level_stdout -le $log_level_int ]; then
+  # shellcheck disable=SC2154
+  if [ "$log_level_stdout" -le "$log_level_int" ]; then
     # STDOUT
     printf "${log_color}[$(date +"%Y-%m-%d %H:%M:%S %Z")] [${log_level}] ${log_text} ${LOG_DEFAULT_COLOR}\n";
   fi
+  # This is all very tricky; figures out a numeric value to compare.
   eval log_level_log="\$LOG_LEVEL_${LOG_LEVEL_LOG}"
   # Check LOG_LEVEL_LOG to see if this level of entry goes to LOG_PATH
-  if [ $log_level_log -le $log_level_int ]; then
+  # shellcheck disable=SC2154
+  if [ "$log_level_log" -le "$log_level_int" ]; then
     # LOG_PATH minus fancypants colors
-    if [ ! -z $LOG_PATH ]; then
-      printf "[$(date +"%Y-%m-%d %H:%M:%S %Z")] [${log_level}] ${log_text}\n" >> $LOG_PATH;
+    if [ ! -z "$LOG_PATH" ]; then
+      printf "[$(date +"%Y-%m-%d %H:%M:%S %Z")] [${log_level}] ${log_text}\n" >> "$LOG_PATH";
     fi
   fi
 
@@ -227,7 +231,8 @@ spinner () {
   local WIDE_UNI_GREYSCALE="░░░░░░░ ▒░░░░░░ ▒▒░░░░░ ▒▒▒░░░░ ▒▒▒▒░░░ ▒▒▒▒▒░░ ▒▒▒▒▒▒░ ▒▒▒▒▒▒▒ ▒▒▒▒▒▒░ ▒▒▒▒▒░░ ▒▒▒▒░░░ ▒▒▒░░░░ ▒▒░░░░░ ▒░░░░░░ ░░░░░░░"
   local WIDE_UNI_GREYSCALE2="░░░░░░░ ▒░░░░░░ ▒▒░░░░░ ▒▒▒░░░░ ▒▒▒▒░░░ ▒▒▒▒▒░░ ▒▒▒▒▒▒░ ▒▒▒▒▒▒▒ ░▒▒▒▒▒▒ ░░▒▒▒▒▒ ░░░▒▒▒▒ ░░░░▒▒▒ ░░░░░▒▒ ░░░░░░▒"
 
-  local SPINNER_NORMAL=$(tput sgr0)
+  local SPINNER_NORMAL
+  SPINNER_NORMAL=$(tput sgr0)
 
   eval SYMBOLS=\$${SPINNER_SYMBOLS}
 
@@ -241,7 +246,8 @@ spinner () {
           SPINNER_COLORNUM=$((SPINNER_COLORNUM+1))
         fi
       fi
-      local COLOR=$(tput setaf ${SPINNER_COLORNUM})
+      local COLOR
+      COLOR=$(tput setaf ${SPINNER_COLORNUM})
       tput sc
       env printf "${COLOR}${c}${SPINNER_NORMAL}"
       tput rc
@@ -274,7 +280,7 @@ shell_has_unicode () {
   # Write a unicode character to a file...read it back and see if it's handled right.
   env printf "\u2714"> unitest.txt
 
-  read unitest < unitest.txt
+  read -r unitest < unitest.txt
   rm -f unitest.txt
   if [ ${#unitest} -le 3 ]; then
     return 0
@@ -301,11 +307,13 @@ run_ok () {
   # whole thing.
   local cmd="${1}"
   local msg="${2}"
-  local columns=$(tput cols)
-  if [ $columns -ge 80 ]; then
+  local columns
+  columns=$(tput cols)
+  if [ "$columns" -ge 80 ]; then
     columns=79
   fi
-  COL=$(( ${columns}-${#msg}-7 ))
+  # shellcheck disable=SC2004
+  COL=$((${columns}-${#msg}-7 ))
 
   printf "%s%${COL}s" "$2"
   # Make sure there some unicode action in the shell; there's no
@@ -323,7 +331,8 @@ run_ok () {
     sleep .2 # It's possible to have a race for stdout and spinner clobbering the next bit
   done
   # Just in case the spinner survived somehow, kill it.
-  local pidcheck=$(ps -e | grep ${spinpid})
+  local pidcheck
+  pidcheck=$(ps -eh ${spinpid})
   if [ ! -z "$pidcheck" ]; then
     kill $spinpid
   fi
@@ -337,7 +346,7 @@ run_ok () {
     else
       log_error "Failed with error: ${res}\n"
       env printf "${REDBG}[  ${BALLOT_X}  ]${NORMAL}\n"
-      if [ $RUN_ERRORS_FATAL ]; then
+      if [ "$RUN_ERRORS_FATAL" ]; then
         echo
         log_fatal "Something went wrong with the previous command. Exiting."
         exit 1
@@ -353,7 +362,7 @@ run_ok () {
       printf "Failed with error: ${res}\n" >> ${RUN_LOG}
       echo
       env printf "${REDBG}[ERROR]${NORMAL}\n"
-      if [ $RUN_ERRORS_FATAL ]; then
+      if [ "$RUN_ERRORS_FATAL" ]; then
         log_fatal "Something went wrong with the previous command. Exiting."
         exit 1
       fi
@@ -366,6 +375,8 @@ run_ok () {
 # if $skipyesno is 1, always Y
 # if NONINTERACTIVE environment variable is 1, always Y
 yesno () {
+  # XXX skipyesno is a global set in the calling script
+  # shellcheck disable=SC2154
   if [ "$skipyesno" = "1" ]; then
     return 0
   fi
@@ -375,7 +386,7 @@ yesno () {
   if [ "$VIRTUALMIN_NONINTERACTIVE" = "1" ]; then
     return 0
   fi
-  while read line; do
+  while read -r line; do
     case $line in
       y|Y|Yes|YES|yes|yES|yEs|YeS|yeS) return 0
       ;;
@@ -425,7 +436,7 @@ detect_ip () {
   else
     log_warning "Unable to determine IP address of primary interface."
     echo "Please enter the name of your primary network interface: "
-    read primaryinterface
+    read -r primaryinterface
     #primaryaddr=`/sbin/ifconfig $primaryinterface|grep 'inet addr'|cut -d: -f2|cut -d" " -f1`
     primaryaddr=$(/sbin/ip -f inet -o -d addr show dev "$primaryinterface" | head -1 | awk '{print $4}' | cut -d"/" -f1)
     if [ "$primaryaddr" = "" ]; then
@@ -445,10 +456,14 @@ detect_ip () {
 # Set the hostname
 set_hostname () {
   i=0
+  local forcehostname
+  if [ ! -z "$1" ]; then
+    forcehostname=$1
+  fi
   while [ $i -eq 0 ]; do
     if [ "$forcehostname" = "" ]; then
       printf "${RED}Please enter a fully qualified hostname (for example, host.example.com): ${NORMAL}"
-      read line
+      read -r line
     else
       log_debug "Setting hostname to $forcehostname"
       line=$forcehostname
@@ -488,7 +503,7 @@ is_fully_qualified () {
       return 0
       ;;
   esac
-  log_warning "Hostname $name is not fully qualified."
+  log_warning "Hostname $1 is not fully qualified."
   return 1
 }
 
@@ -497,23 +512,23 @@ is_fully_qualified () {
 get_distro () {
   os=$(uname -o)
   # Make sure we're Linux
-  if $(echo $os | grep -iq linux); then
+  if echo "$os" | grep -iq linux; then
     if [ -f /etc/redhat-release ]; then # RHEL/CentOS
-      local os_string=$(cat /etc/redhat-release)
-      os_real=$(echo $os_string | cut -d' ' -f1) # Doesn't work for Scientific
-      os_type=$(echo $os_real | tr '[:upper:]' '[:lower:]')
-      os_version=$(echo $os_string | grep -o '[0-9\.]*')
-      os_major_version=$(echo ${os_version} | cut -d '.' -f1)
-      return 0
+      local os_string
+      os_string=$(cat /etc/redhat-release)
+      os_real=$(echo "$os_string" | cut -d' ' -f1) # Doesn't work for Scientific
+      os_type=$(echo "$os_real" | tr '[:upper:]' '[:lower:]')
+      os_version=$(echo "$os_string" | grep -o '[0-9\.]*')
+      os_major_version=$(echo "$os_version" | cut -d '.' -f1)
     elif [ -f /etc/os-release ]; then # Debian/Ubuntu
       # Source it, so we can check VERSION_ID
+      # shellcheck disable=SC1091
       . /etc/os-release
       # Not technically correct, but os-release does not have 7.xxx for centos
       os_real=$NAME
       os_type=$ID
       os_version=$VERSION_ID
-      os_major_version=$(echo ${os_version} | cut -d'.' -f1)
-      return 0
+      os_major_version=$(echo "${os_version}" | cut -d'.' -f1)
     else
       printf "${RED}No /etc/*-release file found, this OS is probably not supported.${NORMAL}\n"
       return 1
@@ -522,4 +537,25 @@ get_distro () {
     printf "${RED}Failed to detect a supported operating system.${NORMAL}\n"
     return 1
   fi
+  if [ ! -z "$1" ]; then
+    case $1 in
+      real)
+        echo "$os_real"
+        ;;
+      type)
+        echo "$os_type"
+        ;;
+      version)
+        echo "$os_version"
+        ;;
+      major)
+        echo "$os_major_version"
+        ;;
+      *)
+        printf "${RED}Unknown argument${NORMAL}\n"
+        return 1
+        ;;
+    esac
+  fi
+  return 0
 }
