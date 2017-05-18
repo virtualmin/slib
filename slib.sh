@@ -163,7 +163,7 @@ log() {
   if [ "$log_level_log" -le "$log_level_int" ]; then
     # LOG_PATH minus fancypants colors
     if [ ! -z "$LOG_PATH" ]; then
-      printf "[$(date +"%Y-%m-%d %H:%M:%S %Z")] [${log_level}] ${log_text}\n" >> "$LOG_PATH";
+      printf "[$(date +"%Y-%m-%d %H:%M:%S %Z")] [${log_level}] ${log_text}\n" >> "$LOG_PATH"
     fi
   fi
 
