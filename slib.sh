@@ -155,7 +155,7 @@ log() {
   if [ "$log_level_stdout" -le "$log_level_int" ]; then
     # STDOUT
     today=$(date +"%Y-%m-%d %H:%M:%S %Z")
-    printf "${log_color}[${today}] [${log_level}] ${log_text} ${LOG_DEFAULT_COLOR}\n";
+    printf "%s[%s] [%s] %s%s\n" "$log_color" "$today" "$log_levvel" "$log_text" "$LOG_DEFAULT_COLOR";
   fi
   # This is all very tricky; figures out a numeric value to compare.
   eval log_level_log="\$LOG_LEVEL_${LOG_LEVEL_LOG}"
