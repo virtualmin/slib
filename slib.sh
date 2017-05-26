@@ -347,7 +347,7 @@ run_ok () {
   done
   # Just in case the spinner survived somehow, kill it.
   local pidcheck
-  pidcheck=$(ps -eh ${spinpid})
+  pidcheck=$(ps --no-headers ${spinpid})
   if [ ! -z "$pidcheck" ]; then
     kill $spinpid 2>/dev/null
   fi
