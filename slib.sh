@@ -349,7 +349,7 @@ run_ok () {
   local pidcheck
   pidcheck=$(ps -eh ${spinpid})
   if [ ! -z "$pidcheck" ]; then
-    kill $spinpid
+    kill $spinpid 2>/dev/null
   fi
   # Log what we were supposed to be running
   printf "${msg}: " >> ${RUN_LOG}
