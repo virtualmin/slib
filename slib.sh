@@ -7,7 +7,15 @@
 # Licensed under the BSD 3 clause license
 # http://github.com/virtualmin/slib
 #--------------------------------------------------------------------------------------------------
-#set -e  # Fail on first error
+
+cleanup () {
+  # Make super duper sure we reap all the spinners
+  # This is ridiculous, and I still don't know why spinners stick around.
+  if [ ! -z "$allpids" ]; then
+    kill "$allpids"
+  fi
+}
+trap cleanup INT EXIT QUIT TERM
 
 # scolors - Color constants
 # canonical source http://github.com/swelljoe/scolors
@@ -285,7 +293,6 @@ spinner () {
 # run_ok - function to run a command or function, start a spinner and print a confirmation
 # indicator when done.
 # Canonical source - http://github.com/swelljoe/run_ok
-
 RUN_LOG="run.log"
 
 # Check for unicode support in the shell
@@ -339,6 +346,7 @@ run_ok () {
   BALLOT_X='\u2718'
   spinner &
   spinpid=$!
+  allpids="$allpids $spinpid"
   echo "Spin pid is: $spinpid" >> ${RUN_LOG}
   eval "${cmd}" 1>> ${RUN_LOG} 2>&1
   local res=$?
