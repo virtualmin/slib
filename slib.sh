@@ -154,7 +154,8 @@ log() {
   # shellcheck disable=SC2154
   if [ "$log_level_stdout" -le "$log_level_int" ]; then
     # STDOUT
-    printf "${log_color}[$(date +"%Y-%m-%d %H:%M:%S %Z")] [${log_level}] ${log_text} ${LOG_DEFAULT_COLOR}\n";
+    today=$(date +"%Y-%m-%d %H:%M:%S %Z")
+    printf "${log_color}[${today}] [${log_level}] ${log_text} ${LOG_DEFAULT_COLOR}\n";
   fi
   # This is all very tricky; figures out a numeric value to compare.
   eval log_level_log="\$LOG_LEVEL_${LOG_LEVEL_LOG}"
@@ -163,7 +164,8 @@ log() {
   if [ "$log_level_log" -le "$log_level_int" ]; then
     # LOG_PATH minus fancypants colors
     if [ ! -z "$LOG_PATH" ]; then
-      printf "[$(date +"%Y-%m-%d %H:%M:%S %Z")] [${log_level}] ${log_text}\n" >> "$LOG_PATH"
+      today=$(date +"%Y-%m-%d %H:%M:%S %Z")
+      printf "[${today}] [${log_level}] ${log_text}\n" >> "$LOG_PATH"
     fi
   fi
 
@@ -236,6 +238,8 @@ spinner () {
 
   eval SYMBOLS=\$${SPINNER_SYMBOLS}
 
+  # Get the parent PID
+  SPINNER_PPID=$(ps -p "$$" -o ppid=)
   while :; do
     tput civis
     for c in ${SYMBOLS}; do
@@ -255,12 +259,23 @@ spinner () {
         if [ ${SPINNER_CLEAR} -eq 1 ]; then
           tput el
         fi
-	rm -f ${SPINNER_DONEFILE}
-	break 2
+	      rm -f ${SPINNER_DONEFILE}
+	      break 2
       fi
       # This is questionable. sleep with fractional seconds is not
       # always available, but seems to not break things, when not.
       env sleep .2
+      # Check to be sure parent is still going; handles sighup/kill
+      if [ ! -z "$SPINNER_PPID" ]; then
+        # This is ridiculous. ps prepends a space in the ppid call, which breaks
+        # this ps with a "garbage option" error.
+        # XXX Potential gotcha if ps produces weird output.
+        # shellcheck disable=SC2086
+        SPINNER_PARENTUP=$(ps --no-headers $SPINNER_PPID)
+        if [ -z "$SPINNER_PARENTUP" ]; then
+          break 2
+        fi
+      fi
     done
   done
   tput cnorm
