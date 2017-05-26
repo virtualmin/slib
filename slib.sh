@@ -165,7 +165,7 @@ log() {
     # LOG_PATH minus fancypants colors
     if [ ! -z "$LOG_PATH" ]; then
       today=$(date +"%Y-%m-%d %H:%M:%S %Z")
-      printf "[${today}] [${log_level}] ${log_text}\n" >> "$LOG_PATH"
+      printf "[%s] [%s] %s\n" "$today" "$log_levvel" "$log_text" >> "$LOG_PATH"
     fi
   fi
 
@@ -338,17 +338,16 @@ run_ok () {
   CHECK='\u2714'
   BALLOT_X='\u2718'
   spinner &
-  local spinpid=$!
+  spinpid=$!
+  echo "Spin pid is: $spinpid" >> ${RUN_LOG}
   eval "${cmd}" 1>> ${RUN_LOG} 2>&1
   local res=$?
   touch stopspinning
-  while [ -f stopspinning ]; do
-    sleep .2 # It's possible to have a race for stdout and spinner clobbering the next bit
-  done
+  sleep .2 # It's possible to have a race for stdout and spinner clobbering the next bit
   # Just in case the spinner survived somehow, kill it.
-  local pidcheck
   pidcheck=$(ps --no-headers ${spinpid})
   if [ ! -z "$pidcheck" ]; then
+    echo "Made it here...why?" >> ${RUN_LOG}
     kill $spinpid 2>/dev/null
   fi
   # Log what we were supposed to be running
