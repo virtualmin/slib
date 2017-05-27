@@ -415,7 +415,7 @@ yesno () {
       n|N|No|NO|no|nO) return 1
       ;;
       *)
-      printf "\nPlease enter y or n: "
+      printf "\n${YELLOW}Please enter ${CYAN}[y]${YELLOW} or ${CYAN}[n]${YELLOW}:${NORMAL} "
       ;;
     esac
   done
