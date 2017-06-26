@@ -12,7 +12,7 @@ cleanup () {
   # Make super duper sure we reap all the spinners
   # This is ridiculous, and I still don't know why spinners stick around.
   if [ ! -z "$allpids" ]; then
-    kill "$allpids"
+    kill "$allpids" &>/dev/null
   fi
 }
 trap cleanup INT EXIT QUIT TERM
