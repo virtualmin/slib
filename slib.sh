@@ -450,7 +450,8 @@ setconfig () {
 # Detect the primary IP address
 # works across most Linux and FreeBSD (maybe)
 detect_ip () {
-  primaryaddr=$(/sbin/ip -f inet -o -d addr show dev \`/sbin/ip ro ls | grep default | awk '{print $5}'\` | head -1 | awk '{print $4}' | cut -d"/" -f1)
+  defaultdev=$(ip ro ls|grep default|awk '{print $5}')
+  primaryaddr=$(ip -f inet addr show dev "$defaultdev"|grep 'inet '|awk '{print $2}'| cut -d"/" -f1)
   if [ "$primaryaddr" ]; then
     log_debug "Primary address detected as $primaryaddr"
     address=$primaryaddr
