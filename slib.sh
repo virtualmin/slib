@@ -17,6 +17,7 @@ cleanup () {
     done
   fi
 }
+# This tries to catch any exit, whether normal or forced (e.g. Ctrl-C)
 trap cleanup INT EXIT QUIT TERM
 
 # scolors - Color constants
@@ -373,6 +374,8 @@ run_ok () {
       if [ "$RUN_ERRORS_FATAL" ]; then
         echo
         log_fatal "Something went wrong with the previous command. Exiting."
+        log_fatal "The last few log entries were:"
+        tail -15 ${RUN_LOG}
         exit 1
       fi
       return ${res}
