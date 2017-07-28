@@ -373,7 +373,7 @@ run_ok () {
       env printf "${REDBG}[  ${BALLOT_X}  ]${NORMAL}\n"
       if [ "$RUN_ERRORS_FATAL" ]; then
         echo
-        log_fatal "Something went wrong with the previous command. Exiting."
+        log_fatal "Something went wrong. Exiting."
         log_fatal "The last few log entries were:"
         tail -15 ${RUN_LOG}
         exit 1
