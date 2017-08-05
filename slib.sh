@@ -18,7 +18,7 @@ cleanup () {
   fi
 }
 # This tries to catch any exit, whether normal or forced (e.g. Ctrl-C)
-trap cleanup INT EXIT QUIT TERM
+trap cleanup INT QUIT TERM
 
 # scolors - Color constants
 # canonical source http://github.com/swelljoe/scolors
@@ -112,7 +112,7 @@ then
 else
     LOG_DEFAULT_COLOR=$(tput sgr0)
     LOG_ERROR_COLOR=$(tput setaf 1)
-    LOG_INFO_COLOR=$(tput sgr 0)
+    LOG_INFO_COLOR=$(tput setaf 6)
     LOG_SUCCESS_COLOR=$(tput setaf 2)
     LOG_WARN_COLOR=$(tput setaf 3)
     LOG_DEBUG_COLOR=$(tput setaf 4)
@@ -166,7 +166,7 @@ log() {
   if [ "$log_level_stdout" -le "$log_level_int" ]; then
     # STDOUT
     today=$(date +"%Y-%m-%d %H:%M:%S %Z")
-    printf "%s[%s] [%s] %s%s\n" "$log_color" "$today" "$log_level" "$log_text" "$LOG_DEFAULT_COLOR";
+    printf "%s %s[%s]%s %s\n" "$today" "$log_color" "$log_level" "$LOG_DEFAULT_COLOR" "$log_text";
   fi
   # This is all very tricky; figures out a numeric value to compare.
   eval log_level_log="\$LOG_LEVEL_${LOG_LEVEL_LOG}"
@@ -205,42 +205,9 @@ SPINNER_CLEAR=1 # Blank the line when done.
 spinner () {
   # Safest option are one of these. Doesn't need Unicode, at all.
   local ASCII_PROPELLER="/ - \\ |"
-  local ASCII_PLUS="x +"
-  local ASCII_BLINK="o -"
-  local ASCII_V="v < ^ >"
-  local ASCII_INFLATE=". o O o"
-
-  # Needs Unicode support in shell and terminal.
-  # These are ordered most to least likely to be available, in my limited experience.
-  local UNI_DOTS="⠋ ⠙ ⠹ ⠸ ⠼ ⠴ ⠦ ⠧ ⠇ ⠏"
-  local UNI_DOTS2="⣾ ⣽ ⣻ ⢿ ⡿ ⣟ ⣯ ⣷"
-  local UNI_DOTS3="⣷ ⣯ ⣟ ⡿ ⢿ ⣻ ⣽ ⣾"
-  local UNI_DOTS4="⠋ ⠙ ⠚ ⠞ ⠖ ⠦ ⠴ ⠲ ⠳ ⠓"
-  local UNI_DOTS5="⠄ ⠆ ⠇ ⠋ ⠙ ⠸ ⠰ ⠠ ⠰ ⠸ ⠙ ⠋ ⠇ ⠆"
-  local UNI_DOTS6="⠋ ⠙ ⠚ ⠒ ⠂ ⠂ ⠒ ⠲ ⠴ ⠦ ⠖ ⠒ ⠐ ⠐ ⠒ ⠓ ⠋"
-  local UNI_DOTS7="⠁ ⠉ ⠙ ⠚ ⠒ ⠂ ⠂ ⠒ ⠲ ⠴ ⠤ ⠄ ⠄ ⠤ ⠴ ⠲ ⠒ ⠂ ⠂ ⠒ ⠚ ⠙ ⠉ ⠁"
-  local UNI_DOTS8="⠈ ⠉ ⠋ ⠓ ⠒ ⠐ ⠐ ⠒ ⠖ ⠦ ⠤ ⠠ ⠠ ⠤ ⠦ ⠖ ⠒ ⠐ ⠐ ⠒ ⠓ ⠋ ⠉ ⠈"
-  local UNI_DOTS9="⠁ ⠁ ⠉ ⠙ ⠚ ⠒ ⠂ ⠂ ⠒ ⠲ ⠴ ⠤ ⠄ ⠄ ⠤ ⠠ ⠠ ⠤ ⠦ ⠖ ⠒ ⠐ ⠐ ⠒ ⠓ ⠋ ⠉ ⠈ ⠈"
-  local UNI_DOTS10="⢹ ⢺ ⢼ ⣸ ⣇ ⡧ ⡗ ⡏"
-  local UNI_DOTS11="⢄ ⢂ ⢁ ⡁ ⡈ ⡐ ⡠"
-  local UNI_DOTS12="⠁ ⠂ ⠄ ⡀ ⢀ ⠠ ⠐ ⠈"
-  local UNI_BOUNCE="⠁ ⠂ ⠄ ⠂"
-  local UNI_PIPES="┤ ┘ ┴ └ ├ ┌ ┬ ┐"
-  local UNI_HIPPIE="☮ ✌ ☺ ♥"
-  local UNI_HANDS="☜ ☝ ☞ ☟"
-  local UNI_ARROW_ROT="➫ ➭ ➬ ➭"
-  local UNI_CARDS="♣ ♤ ♥ ♦"
-  local UNI_TRIANGLE="◢ ◣ ◤ ◥"
-  local UNI_SQUARE="◰ ◳ ◲ ◱"
-  local UNI_BOX_BOUNCE="▖ ▘ ▝ ▗"
-  local UNI_PIE="◴ ◷ ◶ ◵"
-  local UNI_CIRCLE="◐ ◓ ◑ ◒"
-  local UNI_QTR_CIRCLE="◜ ◝ ◞ ◟"
 
   # Bigger spinners and progress type bars; takes more space.
   local WIDE_ASCII_PROG="[>----] [=>---] [==>--] [===>-] [====>] [----<] [---<=] [--<==] [-<===] [<====]"
-  local WIDE_ASCII_PROPELLER="[|####] [#/###] [##-##] [###\\#] [####|] [###\\#] [##-##] [#/###]"
-  local WIDE_ASCII_SNEK="[>----] [~>---] [~~>--] [~~~>-] [~~~~>] [----<] [---<~] [--<~~] [-<~~~] [<~~~~]"
   local WIDE_UNI_GREYSCALE="▒▒▒▒▒▒▒ █▒▒▒▒▒▒ ██▒▒▒▒▒ ███▒▒▒▒ ████▒▒▒ █████▒▒ ██████▒ ███████ ██████▒ █████▒▒ ████▒▒▒ ███▒▒▒▒ ██▒▒▒▒▒ █▒▒▒▒▒▒ ▒▒▒▒▒▒▒"
   local WIDE_UNI_GREYSCALE2="▒▒▒▒▒▒▒ █▒▒▒▒▒▒ ██▒▒▒▒▒ ███▒▒▒▒ ████▒▒▒ █████▒▒ ██████▒ ███████ ▒██████ ▒▒█████ ▒▒▒████ ▒▒▒▒███ ▒▒▒▒▒██ ▒▒▒▒▒▒█"
 
@@ -585,5 +552,76 @@ get_distro () {
         ;;
     esac
   fi
+  return 0
+}
+
+# memory_ok - Function to check for enough memory. Will fix it, if not, by
+# adding a swap file.
+memory_ok () {
+  # Check the available RAM and swap
+  mem_total=$(awk '/MemTotal/ {print $2}' /proc/meminfo)
+  swap_total=$(awk '/SwapTotal/ {print $2}' /proc/meminfo)
+  all_mem=$((mem_total + swap_total))
+  swap_min=$(( 1572864 - all_mem ))
+
+  if [ "$swap_min" -lt '262144' ]; then
+    swap_min=262144
+  fi
+
+  if [ "$all_mem" -gt 104857600 ]; then
+    log_debug "Memory is greater than 1GB, which should be sufficient."
+    return 0
+  else
+    log_error "Memory is below 1GB. A full installation may not be possible."
+  fi
+
+  # We'll need swap, so ask and turn some on.
+  swap_min_h=$((swap_min / 1024))
+  echo "Your system has less than 1GB of available memory and swap. Installation is"
+  echo "likely to fail, especially on Debian/Ubuntu systems (apt-get grows very large"
+  echo "when installing large lists of packages). You could exit and re-install with"
+  echo "the --minimal flag to install a more compact selection of packages, or we can"
+  echo "try to create a swap file for you. To create a swap file, you'll need ${swap_min_h}MB"
+  echo "free disk space, in addition to 200-300MB of free space for package installation."
+  echo
+  echo "Would you like to continue? If you continue, you will be given the option to create"
+  echo "a swap file. (y/n)"
+  if ! yesno; then
+    return 1 # Should exit when this function returns 1
+  fi
+  echo "Would you like for me to try to create a swap file? This will require at least ${swap_min}MB"
+  echo "of free space, in addition to 200-300MB for the installation. (y/n)"
+  if ! yesno; then
+    log_warning "Proceeding without creating a swap file. Installation may fail."
+    return 0
+  fi
+
+  # Check for btrfs, because it can't host a swap file safely.
+  root_fs_type=$(grep -v "^$\|^\s*#" /etc/fstab | awk '{print $2 " " $3}' | grep "/ " | cut -d' ' -f2)
+  if [ "$root_fs_type" = "btrfs" ]; then
+    log_fatal "Your root filesystem appears to be running btrfs. It is unsafe to create a swap file"
+    log_fatal "on a btrfs filesystem. You'll either need to use the --minimal installation or create"
+    log_fatal "a swap file manually (on some other filesystem)."
+    return 2
+  fi
+
+  # Check for enough space.
+  root_fs_avail=$(df /|grep -v Filesystem|awk '{print $4}')
+  if [ "$root_fs_avail" -lt $((swap_min + 358400)) ]; then
+    root_fs_avail_h=$((root_fs_avail / 1024))
+    log_fatal "Root filesystem only has $root_fs_avail_h MB available, which is too small."
+    log_fatal "You'll either need to use the --minimal installation of add more space to '/'."
+    return 3
+  fi
+
+  # Create a new file
+  if ! dd if=/dev/zero of=/swapfile bs=1024 count=$swap_min; then
+    log_fatal "Creating swap file /swapfile failed: $res"
+    return 4
+  fi
+  chmod 0600 /swapfile
+  mkswap /swapfile
+  swapon /swapfile
+  echo "/swapfile          swap            swap    defaults        0 0" >> /etc/fstab
   return 0
 }
