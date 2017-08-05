@@ -562,7 +562,7 @@ memory_ok () {
   mem_total=$(awk '/MemTotal/ {print $2}' /proc/meminfo)
   swap_total=$(awk '/SwapTotal/ {print $2}' /proc/meminfo)
   all_mem=$((mem_total + swap_total))
-  swap_min=$(( 1572864 - all_mem ))
+  swap_min=$(( 1286144 - all_mem ))
 
   if [ "$swap_min" -lt '262144' ]; then
     swap_min=262144
