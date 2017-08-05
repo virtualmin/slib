@@ -616,12 +616,15 @@ memory_ok () {
 
   # Create a new file
   if ! dd if=/dev/zero of=/swapfile bs=1024 count=$swap_min; then
-    log_fatal "Creating swap file /swapfile failed: $res"
+    log_fatal "Creating swap file /swapfile failed."
     return 4
   fi
   chmod 0600 /swapfile
   mkswap /swapfile
-  swapon /swapfile
+  if ! swapon /swapfile; then
+    log_fatal "Enabling swap file failed. If this is a VM, it may be prohibited by your provider."
+    return 5
+  fi
   echo "/swapfile          swap            swap    defaults        0 0" >> /etc/fstab
   return 0
 }
