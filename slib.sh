@@ -165,8 +165,7 @@ log() {
   # shellcheck disable=SC2154
   if [ "$log_level_stdout" -le "$log_level_int" ]; then
     # STDOUT
-    today=$(date +"%Y-%m-%d %H:%M:%S %Z")
-    printf "%s %s[%s]%s %s\n" "$today" "$log_color" "$log_level" "$LOG_DEFAULT_COLOR" "$log_text";
+    printf "%s[%s]%s %s\n" "$log_color" "$log_level" "$LOG_DEFAULT_COLOR" "$log_text";
   fi
   # This is all very tricky; figures out a numeric value to compare.
   eval log_level_log="\$LOG_LEVEL_${LOG_LEVEL_LOG}"
