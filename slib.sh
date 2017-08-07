@@ -24,7 +24,7 @@ trap cleanup INT QUIT TERM
 # canonical source http://github.com/swelljoe/scolors
 
 # do we have tput?
-if type 'tput' > /dev/null; then
+if which 'tput' > /dev/null; then
   # do we have a terminal?
   if [ -t 1 ]; then
     # does the terminal have colors?
