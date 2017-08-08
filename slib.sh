@@ -567,7 +567,7 @@ memory_ok () {
     swap_min=262144
   fi
 
-  if [ "$all_mem" -gt 104857600 ]; then
+  if [ "$all_mem" -gt 1048576 ]; then
     log_debug "Memory is greater than 1GB, which should be sufficient."
     return 0
   else
