@@ -326,7 +326,7 @@ run_ok () {
   if [ ! -z "$pidcheck" ]; then
     echo "Made it here...why?" >> ${RUN_LOG}
     kill $spinpid 2>/dev/null
-    rm -rf ${SPINNER_DONEFILE} 2>dev/null 2>&1
+    rm -rf ${SPINNER_DONEFILE} 2>/dev/null 2>&1
   fi
   # Log what we were supposed to be running
   printf "${msg}: " >> ${RUN_LOG}
