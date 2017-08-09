@@ -327,6 +327,7 @@ run_ok () {
     echo "Made it here...why?" >> ${RUN_LOG}
     kill $spinpid 2>/dev/null
     rm -rf ${SPINNER_DONEFILE} 2>/dev/null 2>&1
+    tput cnorm
   fi
   # Log what we were supposed to be running
   printf "${msg}: " >> ${RUN_LOG}
