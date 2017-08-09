@@ -616,13 +616,13 @@ memory_ok () {
   fi
 
   # Create a new file
-  if ! dd if=/dev/zero of=/swapfile bs=1024 count=$swap_min; then
+  if ! dd if=/dev/zero of=/swapfile bs=1024 count=$swap_min 1>>${RUN_LOG} 2>&1; then
     log_fatal "Creating swap file /swapfile failed."
     return 4
   fi
-  chmod 0600 /swapfile
-  mkswap /swapfile
-  if ! swapon /swapfile; then
+  chmod 0600 /swapfile 1>>${RUN_LOG} 2>&1
+  mkswap /swapfile 1>>${RUN_LOG} 2>&1
+  if ! swapon /swapfile 1>>${RUN_LOG} 2>&1; then
     log_fatal "Enabling swap file failed. If this is a VM, it may be prohibited by your provider."
     return 5
   fi
