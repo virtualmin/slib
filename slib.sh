@@ -198,7 +198,7 @@ log_debug()     { log "$1" "DEBUG" "${LOG_DEBUG_COLOR}"; }
 SPINNER_COLORNUM=2 # What color? Irrelevent if COLORCYCLE=1.
 SPINNER_COLORCYCLE=1 # Does the color cycle?
 SPINNER_DONEFILE="stopspinning" # Path/name of file to exit on.
-SPINNER_SYMBOLS="UNI_DOTS2" # Name of the variable containing the symbols.
+SPINNER_SYMBOLS="ASCII_PROPELLER" # Name of the variable containing the symbols.
 SPINNER_CLEAR=1 # Blank the line when done.
 
 spinner () {
@@ -227,10 +227,10 @@ spinner () {
           SPINNER_COLORNUM=$((SPINNER_COLORNUM+1))
         fi
       fi
-      local COLOR
-      COLOR=$(tput setaf ${SPINNER_COLORNUM})
+      local SPINNER_COLOR
+      SPINNER_COLOR=$(tput setaf ${SPINNER_COLORNUM})
       tput sc
-      env printf "${COLOR}${c}${SPINNER_NORMAL}"
+      env printf "${SPINNER_COLOR}${c}${SPINNER_NORMAL}"
       tput rc
       if [ -f "${SPINNER_DONEFILE}" ]; then
         if [ ${SPINNER_CLEAR} -eq 1 ]; then
@@ -319,13 +319,14 @@ run_ok () {
   echo "Spin pid is: $spinpid" >> ${RUN_LOG}
   eval "${cmd}" 1>> ${RUN_LOG} 2>&1
   local res=$?
-  touch stopspinning
-  sleep .2 # It's possible to have a race for stdout and spinner clobbering the next bit
+  touch ${SPINNER_DONEFILE}
+  env sleep .2 # It's possible to have a race for stdout and spinner clobbering the next bit
   # Just in case the spinner survived somehow, kill it.
   pidcheck=$(ps --no-headers ${spinpid})
   if [ ! -z "$pidcheck" ]; then
     echo "Made it here...why?" >> ${RUN_LOG}
     kill $spinpid 2>/dev/null
+    rm -rf ${SPINNER_DONEFILE} 2>dev/null 2>&1
   fi
   # Log what we were supposed to be running
   printf "${msg}: " >> ${RUN_LOG}
