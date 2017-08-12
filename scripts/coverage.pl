@@ -2,7 +2,6 @@
 use strict;
 use warnings;
 use 5.010;
-use List::MoreUtils qw(uniq);
 
 my $file = $ARGV[0];
 my $testdir = 't';
