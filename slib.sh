@@ -14,6 +14,8 @@ cleanup () {
   if [ ! -z "$allpids" ]; then
     for pid in $allpids; do
       kill "$pid" 1>/dev/null 2>&1
+      tput rc
+      tput cnorm
     done
   fi
 }
@@ -255,6 +257,7 @@ spinner () {
       fi
     done
   done
+  tput rc
   tput cnorm
   return 0
 }
@@ -327,6 +330,7 @@ run_ok () {
     echo "Made it here...why?" >> ${RUN_LOG}
     kill $spinpid 2>/dev/null
     rm -rf ${SPINNER_DONEFILE} 2>/dev/null 2>&1
+    tput rc
     tput cnorm
   fi
   # Log what we were supposed to be running
