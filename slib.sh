@@ -665,8 +665,8 @@ serial_ok () {
 
 # Ask the user for a new serial number and license key
 get_serial () {
-  printf "${YELLOW}Please enter your serial number or 'GPL': ${NORMAL}\n"
+  printf "${YELLOW}Please enter your serial number or 'GPL': ${NORMAL}"
   read -r serial_num
-  printf "${YELLOW}Please enter your license key or 'GPL': ${NORMAL}\n"
+  printf "${YELLOW}Please enter your license key or 'GPL': ${NORMAL}"
   read -r license_key
 }
