@@ -635,3 +635,38 @@ memory_ok () {
   echo "/swapfile          swap            swap    defaults        0 0" >> /etc/fstab
   return 0
 }
+
+# serial_ok $serial $key
+# Does the serial number and licnese key look correct?
+serial_ok () {
+  serial_num=$1
+  license_key=$2
+  i=0
+  while [ $i -eq 0 ]; do
+    if res=$(echo "$serial_num" |grep "[^a-z^A-Z^0-9]"); then
+      printf "Serial number ${RED}$serial_num${NORMAL} contains invalid characters.\n"
+      get_serial
+    elif [ -z "$serial_num" ]; then
+      printf "${RED}Serial number cannot be blank.${NORMAL}\n"
+      get_serial
+    elif res=$(echo "$license_key" |grep "[^a-z^A-Z^0-9]"); then
+      printf "License key ${RED}$license_key${NORMAL} contains invalid characters.\n"
+      get_serial
+    elif [ -z "$license_key" ]; then
+      printf "${RED}License key cannot be blank.${NORMAL}\n"
+      get_serial
+    else
+      i=1
+    fi
+  done
+  export SERIAL=$serial_num
+  export KEY=$license_key
+}
+
+# Ask the user for a new serial number and license key
+get_serial () {
+  printf "${YELLOW}Please enter your serial number or 'GPL': ${NORMAL}\n"
+  read -r serial_num
+  printf "${YELLOW}Please enter your license key or 'GPL': ${NORMAL}\n"
+  read -r license_key
+}
