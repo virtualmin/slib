@@ -473,15 +473,14 @@ set_hostname () {
     else
       hostname "$line"
       detect_ip
+      shortname=$(echo "$line" | cut -d"." -f1)
       if grep "$address" /etc/hosts; then
         log_debug "Entry for IP $address exists in /etc/hosts."
         log_debug "Updating with new hostname."
-        shortname=$(echo "$line" | cut -d"." -f1)
         sed -i "s/^$address\([\s\t]+\).*$/$address\1$line\t$shortname/" /etc/hosts
       else
         log_debug "Adding new entry for hostname $line on $address to /etc/hosts."
-        printf "%s\t%s\t%s\n" \
-        "$address" "$line" "$shortname" >> /etc/hosts
+        printf "%s\t%s\t%s\n" "$address" "$line" "$shortname" >> /etc/hosts
       fi
       i=1
     fi
