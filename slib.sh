@@ -515,7 +515,12 @@ get_distro () {
     if [ -f /etc/redhat-release ]; then # RHEL/CentOS
       local os_string
       os_string=$(cat /etc/redhat-release)
-      os_real=$(echo "$os_string" | cut -d' ' -f1) # Doesn't work for Scientific
+      isrhel=$(echo "$os_string" | grep 'Red Hat')
+      if [ ! -z "$isrhel" ]; then
+        os_real='RHEL'
+      else
+        os_real=$(echo "$os_string" | cut -d' ' -f1) # Doesn't work for Scientific
+      fi
       os_type=$(echo "$os_real" | tr '[:upper:]' '[:lower:]')
       os_version=$(echo "$os_string" | grep -o '[0-9\.]*')
       os_major_version=$(echo "$os_version" | cut -d '.' -f1)
