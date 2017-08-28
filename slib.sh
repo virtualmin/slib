@@ -570,7 +570,6 @@ memory_ok () {
   if [ -z "$min_mem" ]; then
     min_mem=1048576
   fi
-  echo $min_mem
   # Check the available RAM and swap
   mem_total=$(awk '/MemTotal/ {print $2}' /proc/meminfo)
   swap_total=$(awk '/SwapTotal/ {print $2}' /proc/meminfo)
