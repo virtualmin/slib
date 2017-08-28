@@ -1,13 +1,12 @@
 #!/bin/sh
 # shellcheck disable=SC2059 disable=SC2039 disable=SC2034
-#--------------------------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 # slib - Utility function library for Virtualmin installation scripts
 # Copyright Joe Cooper
 # slog logging library Copyright Fred Palmer and Joe Cooper
 # Licensed under the BSD 3 clause license
 # http://github.com/virtualmin/slib
-#--------------------------------------------------------------------------------------------------
-
+#------------------------------------------------------------------------------
 cleanup () {
   # Make super duper sure we reap all the spinners
   # This is ridiculous, and I still don't know why spinners stick around.
@@ -567,6 +566,11 @@ get_distro () {
 # memory_ok - Function to check for enough memory. Will fix it, if not, by
 # adding a swap file.
 memory_ok () {
+  min_mem=$1
+  if [ -z "$min_mem" ]; then
+    min_mem=1048576
+  fi
+  echo $min_mem
   # Check the available RAM and swap
   mem_total=$(awk '/MemTotal/ {print $2}' /proc/meminfo)
   swap_total=$(awk '/SwapTotal/ {print $2}' /proc/meminfo)
@@ -577,11 +581,12 @@ memory_ok () {
     swap_min=262144
   fi
 
-  if [ "$all_mem" -gt 1048576 ]; then
-    log_debug "Memory is greater than 1GB, which should be sufficient."
+  min_mem_h=$((min_mem / 1024))
+  if [ "$all_mem" -gt "$min_mem" ]; then
+    log_debug "Memory is greater than ${min_mem_h}GB, which should be sufficient."
     return 0
   else
-    log_error "Memory is below 1GB. A full installation may not be possible."
+    log_error "Memory is below ${min_mem_h}GB. A full installation may not be possible."
   fi
 
   # We'll need swap, so ask and turn some on.
