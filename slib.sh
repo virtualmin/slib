@@ -2,7 +2,7 @@
 # shellcheck disable=SC2059 disable=SC2039 disable=SC2034
 #------------------------------------------------------------------------------
 # slib - Utility function library for Virtualmin installation scripts
-# Copyright Joe Cooper
+# Copyright 2017 Joe Cooper
 # slog logging library Copyright Fred Palmer and Joe Cooper
 # Licensed under the BSD 3 clause license
 # http://github.com/virtualmin/slib
@@ -582,16 +582,16 @@ memory_ok () {
 
   min_mem_h=$((min_mem / 1024))
   if [ "$all_mem" -gt "$min_mem" ]; then
-    log_debug "Memory is greater than ${min_mem_h}GB, which should be sufficient."
+    log_debug "Memory is greater than ${min_mem_h} MB, which should be sufficient."
     return 0
   else
-    log_error "Memory is below ${min_mem_h}GB. A full installation may not be possible."
+    log_error "Memory is below ${min_mem_h} MB. A full installation may not be possible."
   fi
 
   # We'll need swap, so ask and turn some on.
   swap_min_h=$((swap_min / 1024))
   echo
-  echo "  Your system has less than 1GB of available memory and swap. Installation is"
+  echo "  Your system has less than $min_mem_h} MB of available memory and swap. Installation is"
   echo "  likely to fail, especially on Debian/Ubuntu systems (apt-get grows very large"
   echo "  when installing large lists of packages). You could exit and re-install with"
   echo "  the --minimal flag to install a more compact selection of packages, or we can"
@@ -599,13 +599,13 @@ memory_ok () {
   echo "  free disk space, in addition to 200-300MB of free space for package installation."
   echo
   echo "  Would you like to continue? If you continue, you will be given the option to create"
-  echo "  a swap file. (y/n)"
+  printf "  a swap file. (y/n) "
   if ! yesno; then
     return 1 # Should exit when this function returns 1
   fi
   echo
   echo "  Would you like for me to try to create a swap file? This will require at least ${swap_min_h}MB"
-  echo "  of free space, in addition to 200-300MB for the installation. (y/n)"
+  printf "  of free space, in addition to 200-300MB for the installation. (y/n) "
   if ! yesno; then
     log_warning "Proceeding without creating a swap file. Installation may fail."
     return 0
