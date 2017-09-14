@@ -11,12 +11,15 @@ cleanup () {
   # Make super duper sure we reap all the spinners
   # This is ridiculous, and I still don't know why spinners stick around.
   if [ ! -z "$allpids" ]; then
+    echo "Cleaning up..."
     for pid in $allpids; do
       kill "$pid" 1>/dev/null 2>&1
-      tput rc
-      tput cnorm
     done
   fi
+  tput rc
+  tput cnorm
+  echo "Exiting."
+  exit 99
 }
 # This tries to catch any exit, whether normal or forced (e.g. Ctrl-C)
 trap cleanup INT QUIT TERM
@@ -460,8 +463,8 @@ set_hostname () {
     forcehostname=$1
   fi
   while [ $i -eq 0 ]; do
-    if [ "$forcehostname" = "" ]; then
-      printf "${RED}Please enter a fully qualified hostname (for example, host.example.com): ${NORMAL}"
+    if [ -z "$forcehostname" ]; then
+      printf "${RED}Please enter a fully qualified hostname (for example: host.example.com): ${NORMAL}"
       read -r line
     else
       log_debug "Setting hostname to $forcehostname"
@@ -501,7 +504,6 @@ is_fully_qualified () {
       return 0
       ;;
   esac
-  log_warning "Hostname $1 is not fully qualified."
   return 1
 }
 
