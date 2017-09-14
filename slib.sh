@@ -11,14 +11,12 @@ cleanup () {
   # Make super duper sure we reap all the spinners
   # This is ridiculous, and I still don't know why spinners stick around.
   if [ ! -z "$allpids" ]; then
-    echo "Cleaning up..."
     for pid in $allpids; do
       kill "$pid" 1>/dev/null 2>&1
     done
   fi
   tput rc
   tput cnorm
-  echo
   return 1
 }
 # This tries to catch any exit, whether normal or forced (e.g. Ctrl-C)
