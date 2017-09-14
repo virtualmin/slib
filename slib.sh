@@ -18,6 +18,7 @@ cleanup () {
   fi
   tput rc
   tput cnorm
+  echo
   echo "Exiting."
   exit 99
 }
