@@ -20,10 +20,10 @@ cleanup () {
   tput cnorm
   echo
   echo "Exiting."
-  exit 99
+  return 1
 }
 # This tries to catch any exit, whether normal or forced (e.g. Ctrl-C)
-trap cleanup INT QUIT TERM
+trap cleanup INT QUIT TERM EXIT
 
 # scolors - Color constants
 # canonical source http://github.com/swelljoe/scolors
