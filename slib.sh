@@ -19,7 +19,6 @@ cleanup () {
   tput rc
   tput cnorm
   echo
-  echo "Exiting."
   return 1
 }
 # This tries to catch any exit, whether normal or forced (e.g. Ctrl-C)
