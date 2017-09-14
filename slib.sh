@@ -475,12 +475,13 @@ set_hostname () {
       log_warning "Hostname $line is not fully qualified."
     else
       hostname "$line"
+      echo "$line" > /etc/hostname
       detect_ip
       shortname=$(echo "$line" | cut -d"." -f1)
-      if grep "$address" /etc/hosts; then
+      if grep "^$address" /etc/hosts >/dev/null; then
         log_debug "Entry for IP $address exists in /etc/hosts."
         log_debug "Updating with new hostname."
-        sed -i "s/^$address\([\s\t]+\).*$/$address\1$line\t$shortname/" /etc/hosts
+        sed -i "s/^$address\([\s\t]+\).*$/$address $line $shortname/" /etc/hosts
       else
         log_debug "Adding new entry for hostname $line on $address to /etc/hosts."
         printf "%s\t%s\t%s\n" "$address" "$line" "$shortname" >> /etc/hosts
