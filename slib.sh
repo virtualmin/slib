@@ -14,8 +14,8 @@ cleanup () {
     for pid in $allpids; do
       kill "$pid" 1>/dev/null 2>&1
     done
+    tput rc
   fi
-  tput rc
   tput cnorm
   return 1
 }
