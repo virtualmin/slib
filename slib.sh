@@ -385,6 +385,7 @@ yesno () {
   if [ "$NONINTERACTIVE" = "1" ]; then
     echo "Non-interactive shell detected. Cannot continue, as the script may need to ask questions."
     echo "If you're running this from a script and want to install with default options, use '--force'."
+    echo "Never run this script on a system already running Virtualmin."
     return 1
   fi
   while read -r line; do
