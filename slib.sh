@@ -372,18 +372,20 @@ run_ok () {
 
 # Ask a yes or no question
 # if $skipyesno is 1, always Y
-# if NONINTERACTIVE environment variable is 1, always Y
+# if NONINTERACTIVE environment variable is 1, always N, and print error message to use --force
 yesno () {
   # XXX skipyesno is a global set in the calling script
   # shellcheck disable=SC2154
   if [ "$skipyesno" = "1" ]; then
     return 0
   fi
-  if [ "$NONINTERACTIVE" = "1" ]; then
-    return 0
-  fi
   if [ "$VIRTUALMIN_NONINTERACTIVE" = "1" ]; then
     return 0
+  fi
+  if [ "$NONINTERACTIVE" = "1" ]; then
+    echo "Non-interactive shell detected. Cannot continue, as the script may need to ask questions."
+    echo "If you're running this from a script and want to install with default options, use '--force'."
+    return 1
   fi
   while read -r line; do
     case $line in
@@ -462,7 +464,10 @@ set_hostname () {
   fi
   while [ $i -eq 0 ]; do
     if [ -z "$forcehostname" ]; then
-      printf "${RED}Please enter a fully qualified hostname (for example: host.example.com): ${NORMAL}"
+      local name
+      name=$(hostname -f)
+      log_error "Your system hostname $name is not fully qualified."
+      printf "Please enter a fully qualified hostname (e.g.: host.example.com): "
       read -r line
     else
       log_debug "Setting hostname to $forcehostname"
@@ -529,6 +534,7 @@ get_distro () {
       # shellcheck disable=SC1091
       . /etc/os-release
       # Not technically correct, but os-release does not have 7.xxx for centos
+      # shellcheck disable=SC2153
       os_real=$NAME
       os_type=$ID
       os_version=$VERSION_ID
