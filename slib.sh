@@ -125,7 +125,7 @@ fi
 # text will come out the other side!
 prepare_log_for_nonterminal() {
     # Essentially this strips all the control characters for log colors
-    sed "s/[[:cntrl:]]\[[0-9;]*m//g"
+    sed "s/[[:cntrl:]]\\[[0-9;]*m//g"
 }
 
 log() {
@@ -167,7 +167,7 @@ log() {
   # shellcheck disable=SC2154
   if [ "$log_level_stdout" -le "$log_level_int" ]; then
     # STDOUT
-    printf "%s[%s]%s %s\n" "$log_color" "$log_level" "$LOG_DEFAULT_COLOR" "$log_text";
+    printf "%s[%s]%s %s\\n" "$log_color" "$log_level" "$LOG_DEFAULT_COLOR" "$log_text";
   fi
   # This is all very tricky; figures out a numeric value to compare.
   eval log_level_log="\$LOG_LEVEL_${LOG_LEVEL_LOG}"
@@ -177,7 +177,7 @@ log() {
     # LOG_PATH minus fancypants colors
     if [ ! -z "$LOG_PATH" ]; then
       today=$(date +"%Y-%m-%d %H:%M:%S %Z")
-      printf "[%s] [%s] %s\n" "$today" "$log_level" "$log_text" >> "$LOG_PATH"
+      printf "[%s] [%s] %s\\n" "$today" "$log_level" "$log_text" >> "$LOG_PATH"
     fi
   fi
 
@@ -272,7 +272,7 @@ RUN_LOG="run.log"
 # written to a file and can be read back.
 shell_has_unicode () {
   # Write a unicode character to a file...read it back and see if it's handled right.
-  env printf "\u2714"> unitest.txt
+  env printf "\\u2714"> unitest.txt
 
   read -r unitest < unitest.txt
   rm -f unitest.txt
@@ -337,12 +337,12 @@ run_ok () {
   printf "${msg}: " >> ${RUN_LOG}
   if shell_has_unicode; then
     if [ $res -eq 0 ]; then
-      printf "Success.\n" >> ${RUN_LOG}
-      env printf "${GREENBG}[  ${CHECK}  ]${NORMAL}\n"
+      printf "Success.\\n" >> ${RUN_LOG}
+      env printf "${GREENBG}[  ${CHECK}  ]${NORMAL}\\n"
       return 0
     else
       log_error "Failed with error: ${res}"
-      env printf "${REDBG}[  ${BALLOT_X}  ]${NORMAL}\n"
+      env printf "${REDBG}[  ${BALLOT_X}  ]${NORMAL}\\n"
       if [ "$RUN_ERRORS_FATAL" ]; then
         echo
         log_fatal "Something went wrong. Exiting."
@@ -354,13 +354,13 @@ run_ok () {
     fi
   else
     if [ $res -eq 0 ]; then
-      printf "Success.\n" >> ${RUN_LOG}
-      env printf "${GREENBG}[ OK! ]${NORMAL}\n"
+      printf "Success.\\n" >> ${RUN_LOG}
+      env printf "${GREENBG}[ OK! ]${NORMAL}\\n"
       return 0
     else
-      printf "Failed with error: ${res}\n" >> ${RUN_LOG}
+      printf "Failed with error: ${res}\\n" >> ${RUN_LOG}
       echo
-      env printf "${REDBG}[ERROR]${NORMAL}\n"
+      env printf "${REDBG}[ERROR]${NORMAL}\\n"
       if [ "$RUN_ERRORS_FATAL" ]; then
         log_fatal "Something went wrong with the previous command. Exiting."
         exit 1
@@ -395,7 +395,7 @@ yesno () {
       n|N|No|NO|no|nO) return 1
       ;;
       *)
-      printf "\n${YELLOW}Please enter ${CYAN}[y]${YELLOW} or ${CYAN}[n]${YELLOW}:${NORMAL} "
+      printf "\\n${YELLOW}Please enter ${CYAN}[y]${YELLOW} or ${CYAN}[n]${YELLOW}:${NORMAL} "
       ;;
     esac
   done
@@ -487,7 +487,7 @@ set_hostname () {
         sed -i "s/^$address.*/$address $line $shortname/" /etc/hosts
       else
         log_debug "Adding new entry for hostname $line on $address to /etc/hosts."
-        printf "%s\t%s\t%s\n" "$address" "$line" "$shortname" >> /etc/hosts
+        printf "%s\\t%s\\t%s\\n" "$address" "$line" "$shortname" >> /etc/hosts
       fi
       i=1
     fi
@@ -541,11 +541,11 @@ get_distro () {
       os_version=$VERSION_ID
       os_major_version=$(echo "${os_version}" | cut -d'.' -f1)
     else
-      printf "${RED}No /etc/*-release file found, this OS is probably not supported.${NORMAL}\n"
+      printf "${RED}No /etc/*-release file found, this OS is probably not supported.${NORMAL}\\n"
       return 1
     fi
   else
-    printf "${RED}Failed to detect a supported operating system.${NORMAL}\n"
+    printf "${RED}Failed to detect a supported operating system.${NORMAL}\\n"
     return 1
   fi
   if [ ! -z "$1" ]; then
@@ -563,7 +563,7 @@ get_distro () {
         echo "$os_major_version"
         ;;
       *)
-        printf "${RED}Unknown argument${NORMAL}\n"
+        printf "${RED}Unknown argument${NORMAL}\\n"
         return 1
         ;;
     esac
@@ -599,32 +599,35 @@ memory_ok () {
   # We'll need swap, so ask and turn some on.
   swap_min_h=$((swap_min / 1024))
   echo
-  echo "  Your system has less than $min_mem_h} MB of available memory and swap. Installation is"
-  echo "  likely to fail, especially on Debian/Ubuntu systems (apt-get grows very large"
-  echo "  when installing large lists of packages). You could exit and re-install with"
-  echo "  the --minimal flag to install a more compact selection of packages, or we can"
-  echo "  try to create a swap file for you. To create a swap file, you'll need ${swap_min_h}MB"
-  echo "  free disk space, in addition to 200-300MB of free space for package installation."
+  echo "  Your system has less than ${min_mem_h} MB of available memory and swap."
+  echo "  Installation is likely to fail, especially on Debian/Ubuntu systems (apt-get"
+  echo "  grows very large when installing large lists of packages). You could exit"
+  echo "  and re-install with the --minimal flag to install a more compact selection"
+  echo "  of packages, or we can try to create a swap file for you. To create a swap"
+  echo "  file, you'll need ${swap_min_h}MB free disk space, in addition to 200-300MB"
+  echo "  of free space for package installation."
   echo
-  echo "  Would you like to continue? If you continue, you will be given the option to create"
-  printf "  a swap file. (y/n) "
+  echo "  Would you like to continue? If you continue, you will be given the option to" 
+  printf "  create a swap file. (y/n) "
   if ! yesno; then
     return 1 # Should exit when this function returns 1
   fi
   echo
-  echo "  Would you like for me to try to create a swap file? This will require at least ${swap_min_h}MB"
-  printf "  of free space, in addition to 200-300MB for the installation. (y/n) "
+  echo "  Would you like for me to try to create a swap file? This will require at" 
+  echo "  least ${swap_min_h}MB of free space, in addition to 200-300MB for the"
+
+  printf "  installation. (y/n) "
   if ! yesno; then
     log_warning "Proceeding without creating a swap file. Installation may fail."
     return 0
   fi
 
   # Check for btrfs, because it can't host a swap file safely.
-  root_fs_type=$(grep -v "^$\|^\s*#" /etc/fstab | awk '{print $2 " " $3}' | grep "/ " | cut -d' ' -f2)
+  root_fs_type=$(grep -v "^$\\|^\\s*#" /etc/fstab | awk '{print $2 " " $3}' | grep "/ " | cut -d' ' -f2)
   if [ "$root_fs_type" = "btrfs" ]; then
-    log_fatal "Your root filesystem appears to be running btrfs. It is unsafe to create a swap file"
-    log_fatal "on a btrfs filesystem. You'll either need to use the --minimal installation or create"
-    log_fatal "a swap file manually (on some other filesystem)."
+    log_fatal "Your root filesystem appears to be running btrfs. It is unsafe to create"
+    log_fatal "a swap file on a btrfs filesystem. You'll either need to use the --minimal"
+    log_fatal "installation or create a swap file manually (on some other filesystem)."
     return 2
   fi
 
@@ -660,16 +663,16 @@ serial_ok () {
   i=0
   while [ $i -eq 0 ]; do
     if res=$(echo "$serial_num" |grep "[^a-z^A-Z^0-9]"); then
-      printf "Serial number ${RED}$serial_num${NORMAL} contains invalid characters.\n"
+      printf "Serial number ${RED}$serial_num${NORMAL} contains invalid characters.\\n"
       get_serial
     elif [ -z "$serial_num" ]; then
-      printf "${RED}Serial number cannot be blank.${NORMAL}\n"
+      printf "${RED}Serial number cannot be blank.${NORMAL}\\n"
       get_serial
     elif res=$(echo "$license_key" |grep "[^a-z^A-Z^0-9]"); then
-      printf "License key ${RED}$license_key${NORMAL} contains invalid characters.\n"
+      printf "License key ${RED}$license_key${NORMAL} contains invalid characters.\\n"
       get_serial
     elif [ -z "$license_key" ]; then
-      printf "${RED}License key cannot be blank.${NORMAL}\n"
+      printf "${RED}License key cannot be blank.${NORMAL}\\n"
       get_serial
     else
       i=1
