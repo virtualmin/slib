@@ -332,6 +332,7 @@ run_ok () {
     rm -rf ${SPINNER_DONEFILE} 2>/dev/null 2>&1
     tput rc
     tput cnorm
+    echo
   fi
   # Log what we were supposed to be running
   printf "${msg}: " >> ${RUN_LOG}
