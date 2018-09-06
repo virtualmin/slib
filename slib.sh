@@ -431,7 +431,7 @@ setconfig () {
 # works across most Linux and FreeBSD (maybe)
 detect_ip () {
   defaultdev=$(ip ro ls|grep default|awk '{print $5}')
-  primaryaddr=$(ip -f inet addr show dev "$defaultdev"|grep 'inet '|awk '{print $2}'| cut -d"/" -f1)
+  primaryaddr=$(ip -f inet addr show dev "$defaultdev" | grep 'inet ' | awk '{print $2}' | cut -d"/" -f1 | cut -f1)
   if [ "$primaryaddr" ]; then
     log_debug "Primary address detected as $primaryaddr"
     address=$primaryaddr
