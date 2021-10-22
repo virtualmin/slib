@@ -430,7 +430,7 @@ setconfig () {
 # Detect the primary IP address
 # works across most Linux and FreeBSD (maybe)
 detect_ip () {
-  defaultdev=$(ip ro ls|grep default|awk '{print $5}')
+  defaultdev=$(ip ro ls|grep default|head -1|awk '{print $5}')
   primaryaddr=$(ip -f inet addr show dev "$defaultdev" | grep 'inet ' | awk '{print $2}' | cut -d"/" -f1 | cut -f1)
   if [ "$primaryaddr" ]; then
     log_debug "Primary address detected as $primaryaddr"
@@ -518,7 +518,14 @@ get_distro () {
   os=$(uname -o)
   # Make sure we're Linux
   if echo "$os" | grep -iq linux; then
-    if [ -f /etc/redhat-release ]; then # RHEL/CentOS
+    if [ -f /etc/oracle-release ]; then # Oracle
+      local os_string
+      os_string=$(cat /etc/oracle-release)
+      os_real='Oracle Linux'
+      os_type='ol'
+      os_version=$(echo "$os_string" | grep -o '[0-9\.]*')
+      os_major_version=$(echo "$os_version" | cut -d '.' -f1)
+    elif [ -f /etc/redhat-release ]; then # RHEL/CentOS/Alma/Rocky
       local os_string
       os_string=$(cat /etc/redhat-release)
       isrhel=$(echo "$os_string" | grep 'Red Hat')
