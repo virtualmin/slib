@@ -522,6 +522,7 @@ get_distro () {
       local os_string
       os_string=$(cat /etc/oracle-release)
       os_real='Oracle Linux'
+      os_pretty=$os_string
       os_type='ol'
       os_version=$(echo "$os_string" | grep -o '[0-9\.]*')
       os_major_version=$(echo "$os_version" | cut -d '.' -f1)
@@ -529,12 +530,16 @@ get_distro () {
       local os_string
       os_string=$(cat /etc/redhat-release)
       isrhel=$(echo "$os_string" | grep 'Red Hat')
+      iscentosstream=$(echo "$os_string" | grep 'CentOS Stream')
       if [ ! -z "$isrhel" ]; then
         os_real='RHEL'
+      elif [ ! -z "$iscentosstream" ]; then
+        os_real='CentOS Stream'
       else
         os_real=$(echo "$os_string" | cut -d' ' -f1) # Doesn't work for Scientific
       fi
-      os_type=$(echo "$os_real" | tr '[:upper:]' '[:lower:]')
+      os_pretty=$os_string
+      os_type=$(echo "$os_real" | tr '[:upper:]' '[:lower:]' | tr ' ' '_')
       os_version=$(echo "$os_string" | grep -o '[0-9\.]*')
       os_major_version=$(echo "$os_version" | cut -d '.' -f1)
     elif [ -f /etc/os-release ]; then # Debian/Ubuntu
@@ -544,6 +549,7 @@ get_distro () {
       # Not technically correct, but os-release does not have 7.xxx for centos
       # shellcheck disable=SC2153
       os_real=$NAME
+      os_pretty=$PRETTY_NAME
       os_type=$ID
       os_version=$VERSION_ID
       os_major_version=$(echo "${os_version}" | cut -d'.' -f1)
