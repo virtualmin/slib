@@ -11,7 +11,7 @@ cleanup () {
   stty echo
   # Make super duper sure we reap all the spinners
   # This is ridiculous, and I still don't know why spinners stick around.
-  if [ ! -z "$allpids" ]; then
+  if [ -n "$allpids" ]; then
     for pid in $allpids; do
       kill "$pid" 1>/dev/null 2>&1
     done
@@ -27,7 +27,7 @@ trap cleanup INT QUIT TERM EXIT
 # canonical source http://github.com/swelljoe/scolors
 
 # do we have tput?
-if which 'tput' > /dev/null; then
+if command -pv 'tput' > /dev/null; then
   # do we have a terminal?
   if [ -t 1 ]; then
     # does the terminal have colors?
@@ -176,7 +176,7 @@ log() {
   # shellcheck disable=SC2154
   if [ "$log_level_log" -le "$log_level_int" ]; then
     # LOG_PATH minus fancypants colors
-    if [ ! -z "$LOG_PATH" ]; then
+    if [ -n "$LOG_PATH" ]; then
       today=$(date +"%Y-%m-%d %H:%M:%S %Z")
       printf "[%s] [%s] %s\\n" "$today" "$log_level" "$log_text" >> "$LOG_PATH"
     fi
@@ -246,7 +246,7 @@ spinner () {
       # always available, but seems to not break things, when not.
       env sleep .2
       # Check to be sure parent is still going; handles sighup/kill
-      if [ ! -z "$SPINNER_PPID" ]; then
+      if [ -n "$SPINNER_PPID" ]; then
         # This is ridiculous. ps prepends a space in the ppid call, which breaks
         # this ps with a "garbage option" error.
         # XXX Potential gotcha if ps produces weird output.
@@ -327,7 +327,7 @@ run_ok () {
   env sleep .2 # It's possible to have a race for stdout and spinner clobbering the next bit
   # Just in case the spinner survived somehow, kill it.
   pidcheck=$(ps --no-headers ${spinpid})
-  if [ ! -z "$pidcheck" ]; then
+  if [ -n "$pidcheck" ]; then
     echo "Made it here...why?" >> ${RUN_LOG}
     kill $spinpid 2>/dev/null
     rm -rf ${SPINNER_DONEFILE} 2>/dev/null 2>&1
@@ -467,7 +467,7 @@ detect_ip () {
 set_hostname () {
   local i=0
   local forcehostname
-  if [ ! -z "$1" ]; then
+  if [ -n "$1" ]; then
     forcehostname=$1
   fi
   while [ $i -le 3 ]; do
@@ -544,9 +544,9 @@ get_distro () {
       os_string=$(cat /etc/redhat-release)
       isrhel=$(echo "$os_string" | grep 'Red Hat')
       iscentosstream=$(echo "$os_string" | grep 'CentOS Stream')
-      if [ ! -z "$isrhel" ]; then
+      if [ -n "$isrhel" ]; then
         os_real='RHEL'
-      elif [ ! -z "$iscentosstream" ]; then
+      elif [ -n "$iscentosstream" ]; then
         os_real='CentOS Stream'
       else
         os_real=$(echo "$os_string" | cut -d' ' -f1) # Doesn't work for Scientific
@@ -574,7 +574,7 @@ get_distro () {
     printf "${RED}Failed to detect a supported operating system.${NORMAL}\\n"
     return 1
   fi
-  if [ ! -z "$1" ]; then
+  if [ -n "$1" ]; then
     case $1 in
       real)
         echo "$os_real"
