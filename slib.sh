@@ -465,24 +465,30 @@ detect_ip () {
 
 # Set the hostname
 set_hostname () {
-  i=0
+  local i=0
   local forcehostname
   if [ ! -z "$1" ]; then
     forcehostname=$1
   fi
-  while [ $i -eq 0 ]; do
+  while [ $i -le 3 ]; do
     if [ -z "$forcehostname" ]; then
       local name
       name=$(hostname -f)
       log_error "Your system hostname $name is not fully qualified."
       printf "Please enter a fully qualified hostname (e.g.: host.example.com): "
+      stty echo
       read -r line
+      stty -echo
     else
       log_debug "Setting hostname to $forcehostname"
       line=$forcehostname
     fi
     if ! is_fully_qualified "$line"; then
+      i=$((i + 1))
       log_warning "Hostname $line is not fully qualified."
+      if [ "$i" = "4" ]; then
+        fatal "Unable to set fully qualified hostname."
+      fi
     else
       hostname "$line"
       echo "$line" > /etc/hostname
@@ -496,7 +502,7 @@ set_hostname () {
         log_debug "Adding new entry for hostname $line on $address to /etc/hosts."
         printf "%s\\t%s\\t%s\\n" "$address" "$line" "$shortname" >> /etc/hosts
       fi
-      i=1
+      i=4
     fi
   done
 }
