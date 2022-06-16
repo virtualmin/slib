@@ -8,6 +8,7 @@
 # http://github.com/virtualmin/slib
 #------------------------------------------------------------------------------
 cleanup () {
+  stty echo
   # Make super duper sure we reap all the spinners
   # This is ridiculous, and I still don't know why spinners stick around.
   if [ ! -z "$allpids" ]; then
@@ -388,17 +389,21 @@ yesno () {
     echo "Never run this script on a system already running Virtualmin."
     return 1
   fi
+  stty echo
   while read -r line; do
+    stty -echo
     case $line in
       y|Y|Yes|YES|yes|yES|yEs|YeS|yeS) return 0
       ;;
       n|N|No|NO|no|nO) return 1
       ;;
       *)
+      stty echo
       printf "\\n${YELLOW}Please enter ${CYAN}[y]${YELLOW} or ${CYAN}[n]${YELLOW}:${NORMAL} "
       ;;
     esac
   done
+  stty -echo
 }
 
 # mkdir if it doesn't exist
@@ -439,7 +444,9 @@ detect_ip () {
   else
     log_warning "Unable to determine IP address of primary interface."
     echo "Please enter the name of your primary network interface: "
+    stty echo
     read -r primaryinterface
+    stty -echo
     #primaryaddr=`/sbin/ifconfig $primaryinterface|grep 'inet addr'|cut -d: -f2|cut -d" " -f1`
     primaryaddr=$(/sbin/ip -f inet -o -d addr show dev "$primaryinterface" | head -1 | awk '{print $4}' | head -1 | cut -d"/" -f1)
     if [ "$primaryaddr" = "" ]; then
@@ -698,7 +705,11 @@ serial_ok () {
 # Ask the user for a new serial number and license key
 get_serial () {
   printf "${YELLOW}Please enter your serial number or 'GPL': ${NORMAL}"
+  stty echo
   read -r serial_num
+  stty -echo
   printf "${YELLOW}Please enter your license key or 'GPL': ${NORMAL}"
+  stty echo
   read -r license_key
+  stty -echo
 }
