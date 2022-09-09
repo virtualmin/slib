@@ -1,8 +1,8 @@
 #!/bin/sh
-# shellcheck disable=SC2059 disable=SC2039 disable=SC2034
+# shellcheck disable=SC3043 disable=SC2086 disable=SC2059 disable=SC2039 disable=SC2034
 #------------------------------------------------------------------------------
 # slib - Utility function library for Virtualmin installation scripts
-# Copyright 2017 Joe Cooper
+# Copyright 2022 Joe Cooper
 # slog logging library Copyright Fred Palmer and Joe Cooper
 # Licensed under the BSD 3 clause license
 # http://github.com/virtualmin/slib
@@ -21,7 +21,9 @@ cleanup () {
   return 1
 }
 # This tries to catch any exit, whether normal or forced (e.g. Ctrl-C)
-trap cleanup INT QUIT TERM EXIT
+if [ "${INTERACTIVE_MODE}" != "off" ];then
+  trap cleanup INT QUIT TERM EXIT
+fi
 
 # scolors - Color constants
 # canonical source http://github.com/swelljoe/scolors
@@ -93,13 +95,6 @@ SCRIPT_ARGS="$*"
 SCRIPT_NAME="$0"
 SCRIPT_NAME="${SCRIPT_NAME#\./}"
 SCRIPT_NAME="${SCRIPT_NAME##/*/}"
-
-# Determines if we print colors or not
-if [ "$(tty -s)" ]; then
-    INTERACTIVE_MODE="off"
-else
-    INTERACTIVE_MODE="on"
-fi
 
 #--------------------------------------------------------------------------------------------------
 # Begin Logging Section
@@ -303,9 +298,13 @@ run_ok () {
   local cmd="${1}"
   local msg="${2}"
   local columns
-  columns=$(tput cols)
-  if [ "$columns" -ge 80 ]; then
-    columns=79
+  if [ "${INTERACTIVE_MODE}" != "off" ];then
+    columns=$(tput cols)
+    if [ "$columns" -ge 80 ]; then
+      columns=79
+    fi
+  else
+      columns=79
   fi
   # shellcheck disable=SC2004
   COL=$((${columns}-${#msg}-7 ))
@@ -317,22 +316,26 @@ run_ok () {
   # Unicode checkmark and x mark for run_ok function
   CHECK='\u2714'
   BALLOT_X='\u2718'
-  spinner &
-  spinpid=$!
-  allpids="$allpids $spinpid"
-  echo "Spin pid is: $spinpid" >> ${RUN_LOG}
+  if [ "${INTERACTIVE_MODE}" != "off" ];then
+    spinner &
+    spinpid=$!
+    allpids="$allpids $spinpid"
+    echo "Spin pid is: $spinpid" >> ${RUN_LOG}
+  fi
   eval "${cmd}" 1>> ${RUN_LOG} 2>&1
   local res=$?
   touch ${SPINNER_DONEFILE}
-  env sleep .2 # It's possible to have a race for stdout and spinner clobbering the next bit
+  env sleep .4 # It's possible to have a race for stdout and spinner clobbering the next bit
   # Just in case the spinner survived somehow, kill it.
-  pidcheck=$(ps --no-headers ${spinpid})
-  if [ -n "$pidcheck" ]; then
-    echo "Made it here...why?" >> ${RUN_LOG}
-    kill $spinpid 2>/dev/null
-    rm -rf ${SPINNER_DONEFILE} 2>/dev/null 2>&1
-    tput rc
-    tput cnorm
+  if [ "${INTERACTIVE_MODE}" != "off" ];then
+    pidcheck=$(ps --no-headers ${spinpid})
+    if [ -n "$pidcheck" ]; then
+      echo "Made it here...why?" >> ${RUN_LOG}
+      kill $spinpid 2>/dev/null
+      rm -rf ${SPINNER_DONEFILE} 2>/dev/null 2>&1
+      tput rc
+      tput cnorm
+    fi
   fi
   # Log what we were supposed to be running
   printf "${msg}: " >> ${RUN_LOG}
@@ -356,7 +359,7 @@ run_ok () {
   else
     if [ $res -eq 0 ]; then
       printf "Success.\\n" >> ${RUN_LOG}
-      env printf "${GREENBG}[ OK! ]${NORMAL}\\n"
+      env printf "${GREENBG}[ OK ]${NORMAL}\\n"
       return 0
     else
       printf "Failed with error: ${res}\\n" >> ${RUN_LOG}
