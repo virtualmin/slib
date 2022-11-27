@@ -495,6 +495,7 @@ set_hostname () {
     else
       hostname "$line"
       echo "$line" > /etc/hostname
+      hostnamectl set-hostname "$line" 1>/dev/null 2>&1
       detect_ip
       shortname=$(echo "$line" | cut -d"." -f1)
       if grep "^$address" /etc/hosts >/dev/null; then
