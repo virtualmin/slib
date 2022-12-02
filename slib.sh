@@ -522,7 +522,7 @@ is_fully_qualified () {
       return 1
       ;;
     *.*)
-      log_debug "Hostname OK: fully qualified as $1"
+      log_debug "Hostname is fully qualified as $1"
       return 0
       ;;
   esac
