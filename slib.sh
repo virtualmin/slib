@@ -35,6 +35,7 @@ if command -pv 'tput' > /dev/null; then
     # does the terminal have colors?
     ncolors=$(tput colors)
     if [ "$ncolors" -ge 8 ]; then
+      BLACK="$(tput setaf 0)"
       RED=$(tput setaf 1)
       GREEN=$(tput setaf 2)
       YELLOW=$(tput setaf 3)
@@ -50,6 +51,14 @@ if command -pv 'tput' > /dev/null; then
       CYANBG=$(tput setab 6)
       WHITEBG=$(tput setab 7)
 
+      # Do wee have support
+      # for bright colors?
+      if [ "$ncolors" -ge 16 ]; then
+        BLACK="$(tput setaf 16)"
+        WHITE=$(tput setaf 15)
+        WHITEBG=$(tput setab 15)
+      fi
+
       BOLD=$(tput bold)
       UNDERLINE=$(tput smul) # Many terminals don't support this
       NORMAL=$(tput sgr0)
@@ -57,6 +66,7 @@ if command -pv 'tput' > /dev/null; then
   fi
 else
   echo "tput not found, colorized output disabled."
+  BLACK=''
   RED=''
   GREEN=''
   YELLOW=''
