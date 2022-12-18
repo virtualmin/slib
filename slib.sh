@@ -352,11 +352,11 @@ run_ok () {
   if shell_has_unicode; then
     if [ $res -eq 0 ]; then
       printf "Success.\\n" >> ${RUN_LOG}
-      env printf "${GREENBG}[  ${CHECK}  ]${NORMAL}\\n"
+      env printf "${GREENBG}   ${CHECK}   ${NORMAL}\\n"
       return 0
     else
       log_error "Failed with error: ${res}"
-      env printf "${REDBG}[  ${BALLOT_X}  ]${NORMAL}\\n"
+      env printf "${REDBG}   ${BALLOT_X}   ${NORMAL}\\n"
       if [ "$RUN_ERRORS_FATAL" ]; then
         echo
         log_fatal "Something went wrong. Exiting."
