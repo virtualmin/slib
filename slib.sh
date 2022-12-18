@@ -206,15 +206,12 @@ log_debug()     { log "$1" "DEBUG" "${LOG_DEBUG_COLOR}"; }
 SPINNER_COLORNUM=2 # What color? Irrelevent if COLORCYCLE=1.
 SPINNER_COLORCYCLE=1 # Does the color cycle?
 SPINNER_DONEFILE="stopspinning" # Path/name of file to exit on.
-SPINNER_SYMBOLS="ASCII_PROPELLER" # Name of the variable containing the symbols.
+SPINNER_SYMBOLS="WIDE_ASCII_PROG" # Name of the variable containing the symbols.
 SPINNER_CLEAR=1 # Blank the line when done.
 
 spinner () {
   # Safest option are one of these. Doesn't need Unicode, at all.
-  local ASCII_PROPELLER="/ - \\ |"
-
-  # Bigger spinners and progress type bars; takes more space.
-  local WIDE_ASCII_PROG="[>---] [=>--] [==>-] [===>] [---<] [--<=] [-<==] [<===]"
+  local WIDE_ASCII_PROG="[>-] [->] [--] [--]"
   local WIDE_UNI_GREYSCALE2="▒▒▒ █▒▒ ██▒ ███ ▒██ ▒▒█ ▒▒▒"
 
   local SPINNER_NORMAL
@@ -368,11 +365,11 @@ run_ok () {
   else
     if [ $res -eq 0 ]; then
       printf "Success.\\n" >> ${RUN_LOG}
-      env printf "${GREENBG}[ OK ]${NORMAL}\\n"
+      env printf "${GREENBG} OK ${NORMAL}\\n"
       return 0
     else
       printf "Failed with error: ${res}\\n" >> ${RUN_LOG}
-      env printf "${REDBG}[ ER ]${NORMAL}\\n"
+      env printf "${REDBG} ER ${NORMAL}\\n"
       if [ "$RUN_ERRORS_FATAL" ]; then
         log_fatal "Something went wrong with the previous command. Exiting."
         exit 1
