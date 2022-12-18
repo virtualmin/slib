@@ -214,7 +214,7 @@ spinner () {
   local ASCII_PROPELLER="/ - \\ |"
 
   # Bigger spinners and progress type bars; takes more space.
-  local WIDE_ASCII_PROG="[>----] [=>---] [==>--] [===>-] [====>] [----<] [---<=] [--<==] [-<===] [<====]"
+  local WIDE_ASCII_PROG="[>---] [=>--] [==>-] [===>] [---<] [--<=] [-<==] [<===]"
   local WIDE_UNI_GREYSCALE2="▒▒▒ █▒▒ ██▒ ███ ▒██ ▒▒█ ▒▒▒"
 
   local SPINNER_NORMAL
@@ -372,7 +372,7 @@ run_ok () {
       return 0
     else
       printf "Failed with error: ${res}\\n" >> ${RUN_LOG}
-      env printf "${REDBG}[ERROR]${NORMAL}\\n"
+      env printf "${REDBG}[ ER ]${NORMAL}\\n"
       if [ "$RUN_ERRORS_FATAL" ]; then
         log_fatal "Something went wrong with the previous command. Exiting."
         exit 1
