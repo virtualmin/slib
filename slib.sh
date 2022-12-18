@@ -372,7 +372,6 @@ run_ok () {
       return 0
     else
       printf "Failed with error: ${res}\\n" >> ${RUN_LOG}
-      echo
       env printf "${REDBG}[ERROR]${NORMAL}\\n"
       if [ "$RUN_ERRORS_FATAL" ]; then
         log_fatal "Something went wrong with the previous command. Exiting."
