@@ -215,8 +215,7 @@ spinner () {
 
   # Bigger spinners and progress type bars; takes more space.
   local WIDE_ASCII_PROG="[>----] [=>---] [==>--] [===>-] [====>] [----<] [---<=] [--<==] [-<===] [<====]"
-  local WIDE_UNI_GREYSCALE="▒▒▒▒▒▒▒ █▒▒▒▒▒▒ ██▒▒▒▒▒ ███▒▒▒▒ ████▒▒▒ █████▒▒ ██████▒ ███████ ██████▒ █████▒▒ ████▒▒▒ ███▒▒▒▒ ██▒▒▒▒▒ █▒▒▒▒▒▒ ▒▒▒▒▒▒▒"
-  local WIDE_UNI_GREYSCALE2="▒▒▒▒▒▒▒ █▒▒▒▒▒▒ ██▒▒▒▒▒ ███▒▒▒▒ ████▒▒▒ █████▒▒ ██████▒ ███████ ▒██████ ▒▒█████ ▒▒▒████ ▒▒▒▒███ ▒▒▒▒▒██ ▒▒▒▒▒▒█"
+  local WIDE_UNI_GREYSCALE2="▒▒▒ █▒▒ ██▒ ███ ▒██ ▒▒█ ▒▒▒"
 
   local SPINNER_NORMAL
   SPINNER_NORMAL=$(tput sgr0)
@@ -317,7 +316,7 @@ run_ok () {
       columns=79
   fi
   # shellcheck disable=SC2004
-  COL=$((${columns}-${#msg}-7 ))
+  COL=$((${columns}-${#msg}-3 ))
 
   printf "%s%${COL}s" "$2"
   # Make sure there some unicode action in the shell; there's no
@@ -352,11 +351,11 @@ run_ok () {
   if shell_has_unicode; then
     if [ $res -eq 0 ]; then
       printf "Success.\\n" >> ${RUN_LOG}
-      env printf "${GREENBG}   ${CHECK}   ${NORMAL}\\n"
+      env printf "${BLACK}${GREENBG} ${CHECK} ${NORMAL}\\n"
       return 0
     else
       log_error "Failed with error: ${res}"
-      env printf "${REDBG}   ${BALLOT_X}   ${NORMAL}\\n"
+      env printf "${BLACK}${REDBG} ${BALLOT_X} ${NORMAL}\\n"
       if [ "$RUN_ERRORS_FATAL" ]; then
         echo
         log_fatal "Something went wrong. Exiting."
