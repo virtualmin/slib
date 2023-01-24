@@ -443,7 +443,7 @@ setconfig () {
 # Detect the primary IP address
 # works across most Linux and FreeBSD (maybe)
 detect_ip () {
-  defaultdev=$(ip ro ls|grep default|head -1|awk '{print $5}')
+  defaultdev=$(ip ro ls|grep default|head -1|sed -e 's/.*\sdev\s//g'|awk '{print $1}')
   primaryaddr=$(ip -f inet addr show dev "$defaultdev" | grep 'inet ' | awk '{print $2}' | head -1 | cut -d"/" -f1 | cut -f1)
   if [ "$primaryaddr" ]; then
     log_debug "Primary address detected as $primaryaddr"
