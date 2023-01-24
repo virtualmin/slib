@@ -462,7 +462,7 @@ detect_ip () {
       primaryaddr=$(/sbin/ifconfig "$primaryinterface"|grep 'inet' | awk '{ print $2 }')
     fi
     if [ "$primaryaddr" ]; then
-      log_debug"Primary address detected as $primaryaddr"
+      log_debug "Primary address detected as $primaryaddr"
       address=$primaryaddr
     else
       fatal "Unable to determine IP address of selected interface.  Cannot continue."
