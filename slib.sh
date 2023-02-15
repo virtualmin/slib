@@ -610,83 +610,87 @@ get_distro () {
 # adding a swap file.
 memory_ok () {
   min_mem=$1
-  if [ -z "$min_mem" ]; then
-    min_mem=1048576
-  fi
-  # Check the available RAM and swap
-  mem_total=$(awk '/MemTotal/ {print $2}' /proc/meminfo)
-  swap_total=$(awk '/SwapTotal/ {print $2}' /proc/meminfo)
-  all_mem=$((mem_total + swap_total))
-  swap_min=$(( 1286144 - all_mem ))
+  # If Virtualmin swap hasn't been setup yet, try doing it
+  is_swap=$(swapon -s|grep /swap.vm)
+  if [ -n $is_swap ]; then
+    if [ -z "$min_mem" ]; then
+      min_mem=1048576
+    fi
+    # Check the available RAM and swap
+    mem_total=$(awk '/MemTotal/ {print $2}' /proc/meminfo)
+    swap_total=$(awk '/SwapTotal/ {print $2}' /proc/meminfo)
+    all_mem=$((mem_total + swap_total))
+    swap_min=$(( 1286144 - all_mem ))
 
-  if [ "$swap_min" -lt '262144' ]; then
-    swap_min=262144
-  fi
+    if [ "$swap_min" -lt '262144' ]; then
+      swap_min=262144
+    fi
 
-  min_mem_h=$((min_mem / 1024))
-  if [ "$all_mem" -gt "$min_mem" ]; then
-    log_debug "Memory is greater than ${min_mem_h} MB, which should be sufficient."
-    return 0
-  else
-    log_error "Memory is below ${min_mem_h} MB. A full installation may not be possible."
-  fi
+    min_mem_h=$((min_mem / 1024))
+    if [ "$all_mem" -gt "$min_mem" ]; then
+      log_debug "Memory is greater than ${min_mem_h} MB, which should be sufficient."
+      return 0
+    else
+      log_error "Memory is below ${min_mem_h} MB. A full installation may not be possible."
+    fi
 
-  # We'll need swap, so ask and turn some on.
-  swap_min_h=$((swap_min / 1024))
-  echo
-  echo "  Your system has less than ${min_mem_h} MB of available memory and swap."
-  echo "  Installation is likely to fail, especially on Debian/Ubuntu systems (apt-get"
-  echo "  grows very large when installing large lists of packages). You could exit"
-  echo "  and re-install with the --minimal flag to install a more compact selection"
-  echo "  of packages, or we can try to create a swap file for you. To create a swap"
-  echo "  file, you'll need ${swap_min_h}MB free disk space, in addition to 200-300MB"
-  echo "  of free space for package installation."
-  echo
-  echo "  Would you like to continue? If you continue, you will be given the option to" 
-  printf "  create a swap file. (y/n) "
-  if ! yesno; then
-    return 1 # Should exit when this function returns 1
-  fi
-  echo
-  echo "  Would you like for me to try to create a swap file? This will require at" 
-  echo "  least ${swap_min_h}MB of free space, in addition to 200-300MB for the"
+    # We'll need swap, so ask and turn some on.
+    swap_min_h=$((swap_min / 1024))
+    echo
+    echo "  Your system has less than ${min_mem_h} MB of available memory and swap."
+    echo "  Installation is likely to fail, especially on Debian/Ubuntu systems (apt-get"
+    echo "  grows very large when installing large lists of packages). You could exit"
+    echo "  and re-install with the --minimal flag to install a more compact selection"
+    echo "  of packages, or we can try to create a swap file for you. To create a swap"
+    echo "  file, you'll need ${swap_min_h} MB free disk space, in addition to 200-300 MB"
+    echo "  of free space for package installation."
+    echo
+    echo "  Would you like to continue? If you continue, you will be given the option to" 
+    printf "  create a swap file. (y/n) "
+    if ! yesno; then
+      return 1 # Should exit when this function returns 1
+    fi
+    echo
+    echo "  Would you like for me to try to create a swap file? This will require at" 
+    echo "  least ${swap_min_h} MB of free space, in addition to 200-300 MB for the"
 
-  printf "  installation. (y/n) "
-  if ! yesno; then
-    log_warning "Proceeding without creating a swap file. Installation may fail."
-    return 0
-  fi
+    printf "  installation. (y/n) "
+    if ! yesno; then
+      log_warning "Proceeding without creating a swap file. Installation may fail."
+      return 0
+    fi
 
-  # Check for btrfs, because it can't host a swap file safely.
-  root_fs_type=$(grep -v "^$\\|^\\s*#" /etc/fstab | awk '{print $2 " " $3}' | grep "/ " | cut -d' ' -f2)
-  if [ "$root_fs_type" = "btrfs" ]; then
-    log_fatal "Your root filesystem appears to be running btrfs. It is unsafe to create"
-    log_fatal "a swap file on a btrfs filesystem. You'll either need to use the --minimal"
-    log_fatal "installation or create a swap file manually (on some other filesystem)."
-    return 2
-  fi
+    # Check for btrfs, because it can't host a swap file safely.
+    root_fs_type=$(grep -v "^$\\|^\\s*#" /etc/fstab | awk '{print $2 " " $3}' | grep "/ " | cut -d' ' -f2)
+    if [ "$root_fs_type" = "btrfs" ]; then
+      log_fatal "Your root filesystem appears to be running btrfs. It is unsafe to create"
+      log_fatal "a swap file on a btrfs filesystem. You'll either need to use the --minimal"
+      log_fatal "installation or create a swap file manually (on some other filesystem)."
+      return 2
+    fi
 
-  # Check for enough space.
-  root_fs_avail=$(df /|grep -v Filesystem|awk '{print $4}')
-  if [ "$root_fs_avail" -lt $((swap_min + 358400)) ]; then
-    root_fs_avail_h=$((root_fs_avail / 1024))
-    log_fatal "Root filesystem only has $root_fs_avail_h MB available, which is too small."
-    log_fatal "You'll either need to use the --minimal installation of add more space to '/'."
-    return 3
-  fi
+    # Check for enough space.
+    root_fs_avail=$(df /|grep -v Filesystem|awk '{print $4}')
+    if [ "$root_fs_avail" -lt $((swap_min + 358400)) ]; then
+      root_fs_avail_h=$((root_fs_avail / 1024))
+      log_fatal "Root filesystem only has $root_fs_avail_h MB available, which is too small."
+      log_fatal "You'll either need to use the --minimal installation of add more space to '/'."
+      return 3
+    fi
 
-  # Create a new file
-  if ! dd if=/dev/zero of=/swapfile bs=1024 count=$swap_min 1>>${RUN_LOG} 2>&1; then
-    log_fatal "Creating swap file /swapfile failed."
-    return 4
+    # Create a new file
+    if ! dd if=/dev/zero of=/swap.vm bs=1024 count=$swap_min 1>>${RUN_LOG} 2>&1; then
+      log_fatal "Creating swap file /swap.vm failed."
+      return 4
+    fi
+    chmod 0600 /swap.vm 1>>${RUN_LOG} 2>&1
+    mkswap /swap.vm 1>>${RUN_LOG} 2>&1
+    if ! swapon /swap.vm 1>>${RUN_LOG} 2>&1; then
+      log_fatal "Enabling swap file failed. If this is a VM, it may be prohibited by your provider."
+      return 5
+    fi
+    echo "/swap.vm          swap            swap    defaults        0 0" >> /etc/fstab
   fi
-  chmod 0600 /swapfile 1>>${RUN_LOG} 2>&1
-  mkswap /swapfile 1>>${RUN_LOG} 2>&1
-  if ! swapon /swapfile 1>>${RUN_LOG} 2>&1; then
-    log_fatal "Enabling swap file failed. If this is a VM, it may be prohibited by your provider."
-    return 5
-  fi
-  echo "/swapfile          swap            swap    defaults        0 0" >> /etc/fstab
   return 0
 }
 
