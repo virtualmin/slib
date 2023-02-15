@@ -610,6 +610,7 @@ get_distro () {
 # adding a swap file.
 memory_ok () {
   min_mem=$1
+  disk_space_required=$2
   # If Virtualmin swap hasn't been setup yet, try doing it
   is_swap=$(swapon -s|grep /swap.vm)
   if [ -n $is_swap ]; then
@@ -642,8 +643,8 @@ memory_ok () {
     echo "  grows very large when installing large lists of packages). You could exit"
     echo "  and re-install with the --minimal flag to install a more compact selection"
     echo "  of packages, or we can try to create a swap file for you. To create a swap"
-    echo "  file, you'll need ${swap_min_h} MB free disk space, in addition to 200-300 MB"
-    echo "  of free space for package installation."
+    echo "  file, you'll need ${swap_min_h} MB free disk space, in addition to $disk_space_required GB of free space"
+    echo "  for packages installation."
     echo
     echo "  Would you like to continue? If you continue, you will be given the option to" 
     printf "  create a swap file. (y/n) "
@@ -651,8 +652,8 @@ memory_ok () {
       return 1 # Should exit when this function returns 1
     fi
     echo
-    echo "  Would you like for me to try to create a swap file? This will require at" 
-    echo "  least ${swap_min_h} MB of free space, in addition to 200-300 MB for the"
+    echo "  Would you like for me to try to create a swap file? This will require" 
+    echo "   at least ${swap_min_h} MB of free space, in addition to $disk_space_required GB for the"
 
     printf "  installation. (y/n) "
     if ! yesno; then
