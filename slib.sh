@@ -540,7 +540,15 @@ get_distro () {
   os=$(uname -o)
   # Make sure we're Linux
   if echo "$os" | grep -iq linux; then
-    if [ -f /etc/oracle-release ]; then # Oracle
+    if [ -f /etc/cloudlinux-release ]; then # Oracle
+      local os_string
+      os_string=$(cat /etc/cloudlinux-release)
+      os_real='CloudLinux'
+      os_pretty=$os_string
+      os_type='cloudlinux'
+      os_version=$(echo "$os_string" | grep -o '[0-9\.]*')
+      os_major_version=$(echo "$os_version" | cut -d '.' -f1)
+    elif [ -f /etc/oracle-release ]; then # Oracle
       local os_string
       os_string=$(cat /etc/oracle-release)
       os_real='Oracle Linux'
