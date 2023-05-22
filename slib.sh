@@ -621,7 +621,7 @@ memory_ok () {
   disk_space_required=$2
   # If Virtualmin swap hasn't been setup yet, try doing it
   is_swap=$(swapon -s|grep /swap.vm)
-  if [ -n $is_swap ]; then
+  if [ -n "$is_swap" ]; then
     if [ -z "$min_mem" ]; then
       min_mem=1048576
     fi
