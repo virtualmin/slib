@@ -471,6 +471,17 @@ detect_ip () {
   fi
 }
 
+# Set the hostname in cloud-init
+set_hostname_cloud () {
+  # If cloud-init is installed, preserve the hostname Virtualmin sets
+  if [ -f "/etc/cloud/cloud.cfg" ]; then
+    if grep "^preserve_hostname: false" /etc/cloud/cloud.cfg >/dev/null; then
+      log_debug "Setting preserve_hostname to true in /etc/cloud/cloud.cfg"
+      sed -i "s/^preserve_hostname: false/preserve_hostname: true/" /etc/cloud/cloud.cfg
+    fi
+  fi
+}
+
 # Set the hostname
 set_hostname () {
   local i=0
@@ -501,6 +512,7 @@ set_hostname () {
       hostname "$line"
       echo "$line" > /etc/hostname
       hostnamectl set-hostname "$line" 1>/dev/null 2>&1
+      set_hostname_cloud
       detect_ip
       shortname=$(echo "$line" | cut -d"." -f1)
       if grep "^$address" /etc/hosts >/dev/null; then
@@ -524,6 +536,10 @@ is_fully_qualified () {
       ;;
     *.localdomain)
       log_warning "Hostname cannot be *.localdomain."
+      return 1
+      ;;
+    *.internal)
+      log_warning "Hostname cannot be *.internal."
       return 1
       ;;
     *.*)
