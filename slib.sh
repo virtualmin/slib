@@ -1,8 +1,8 @@
 #!/bin/sh
-# shellcheck disable=SC3043 disable=SC2086 disable=SC2059 disable=SC2039 disable=SC2034
+# shellcheck disable=SC3043 disable=SC2086 disable=SC2059 disable=SC2039 disable=SC2034 disable=SC2317
 #------------------------------------------------------------------------------
 # Utility function library for Virtualmin installation scripts
-# slib v1.0.6 (https://github.com/virtualmin/slib/)
+# slib v1.0.6 (https://github.com/virtualmin/slib)
 # Copyright 2022 Joe Cooper
 # slog logging library Copyright Fred Palmer and Joe Cooper
 # Licensed under the BSD 3 clause license
@@ -18,11 +18,28 @@ cleanup () {
     tput sgr0
   fi
   tput cnorm
-  return 1
+  if [ -n "$VIRTUALMIN_INSTALL_TEMPDIR" ]; then
+    if echo "$VIRTUALMIN_INSTALL_TEMPDIR" | grep -q "virtualmin-"; then
+      rm -rf $VIRTUALMIN_INSTALL_TEMPDIR
+    fi
+  fi
+
+  if [ "$1" != "EXIT" ]; then
+    echo
+  fi
+
+  cleanup() {
+    :
+  }
+  exit 1
 }
+
 # This tries to catch any exit, whether normal or forced (e.g. Ctrl-C)
-if [ "${INTERACTIVE_MODE}" != "off" ];then
-  trap cleanup INT QUIT TERM EXIT
+if [ "${INTERACTIVE_MODE}" != "off" ]; then
+  trap 'cleanup INT' INT
+  trap 'cleanup QUIT' QUIT
+  trap 'cleanup TERM' TERM
+  trap 'cleanup EXIT' EXIT
 fi
 
 # scolors - Color constants
