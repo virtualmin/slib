@@ -8,6 +8,7 @@
 # Licensed under the BSD 3 clause license
 #------------------------------------------------------------------------------
 cleanup () {
+  exit_code=$1
   stty echo
   # Make super duper sure we reap all the spinners
   # This is ridiculous, and I still don't know why spinners stick around.
@@ -24,22 +25,19 @@ cleanup () {
     fi
   fi
 
-  if [ "$1" != "EXIT" ]; then
+  if [ "$exit_code" -ne 0 ]; then
     echo
   fi
 
-  cleanup() {
-    :
-  }
-  exit 1
+  exit $exit_code
 }
 
 # This tries to catch any exit, whether normal or forced (e.g. Ctrl-C)
 if [ "${INTERACTIVE_MODE}" != "off" ]; then
-  trap 'cleanup INT' INT
-  trap 'cleanup QUIT' QUIT
-  trap 'cleanup TERM' TERM
-  trap 'cleanup EXIT' EXIT
+  trap 'cleanup 2' INT
+  trap 'cleanup 3' QUIT
+  trap 'cleanup 15' TERM
+  trap 'cleanup 0' EXIT
 fi
 
 # scolors - Color constants
