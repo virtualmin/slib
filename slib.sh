@@ -144,12 +144,12 @@ fi
 # This function scrubs the output of any control characters used in colorized output
 # It's designed to be piped through with text that needs scrubbing.  The scrubbed
 # text will come out the other side!
-prepare_log_for_nonterminal() {
+prepare_log_for_nonterminal () {
     # Essentially this strips all the control characters for log colors
-    sed "s/[[:cntrl:]]\\[[0-9;]*m//g"
+    sed -E 's/\x1B\[[0-9;]*[mK]//g; s/\x1B\([A-Za-z]//g' | tr -d '[:cntrl:]'
 }
 
-log() {
+log () {
   local log_text="$1"
   local log_level="$2"
   local log_color="$3"
@@ -359,7 +359,8 @@ run_ok () {
     fi
   fi
   # Log what we were supposed to be running
-  printf "${msg}: " >> ${RUN_LOG}
+  msg_safe=$(echo "$msg" | prepare_log_for_nonterminal)
+  printf "${msg_safe}: " >> ${RUN_LOG}
   if shell_has_unicode; then
     if [ $res -eq 0 ]; then
       printf "Success.\\n" >> ${RUN_LOG}
