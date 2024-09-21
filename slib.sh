@@ -149,6 +149,11 @@ prepare_log_for_nonterminal () {
     sed -E 's/\x1B\[[0-9;]*[mK]//g; s/\x1B\([A-Za-z]//g' | tr -d '[:cntrl:]'
 }
 
+log_date () {
+  local log_date_level="$1"
+  echo "[$(date +"%Y-%m-%d %H:%M:%S %Z")] [$log_date_level] "
+}
+
 log () {
   local log_text="$1"
   local log_level="$2"
@@ -318,6 +323,8 @@ run_ok () {
   # whole thing.
   local cmd="${1}"
   local msg="${2}"
+  local log_pref
+  log_pref="$(log_date "INFO")"
   local columns
   if [ "${INTERACTIVE_MODE}" != "off" ];then
     columns=$(tput cols)
@@ -341,7 +348,7 @@ run_ok () {
     spinner &
     spinpid=$!
     allpids="$allpids $spinpid"
-    echo "Spin pid is: $spinpid" >> ${RUN_LOG}
+    echo "$log_pref Spin pid is: $spinpid" >> ${RUN_LOG}
   fi
   eval "${cmd}" 1>> ${RUN_LOG} 2>&1
   local res=$?
@@ -351,7 +358,7 @@ run_ok () {
   if [ "${INTERACTIVE_MODE}" != "off" ];then
     pidcheck=$(ps --no-headers ${spinpid})
     if [ -n "$pidcheck" ]; then
-      echo "Made it here...why?" >> ${RUN_LOG}
+      echo "$log_pref Made it here...why?" >> ${RUN_LOG}
       kill $spinpid 2>/dev/null
       rm -rf ${SPINNER_DONEFILE} 2>/dev/null 2>&1
       tput rc
@@ -360,14 +367,14 @@ run_ok () {
   fi
   # Log what we were supposed to be running
   msg_safe=$(echo "$msg" | prepare_log_for_nonterminal)
-  printf "${msg_safe}: " >> ${RUN_LOG}
+  printf "$log_pref ${msg_safe}: " >> ${RUN_LOG}
   if shell_has_unicode; then
     if [ $res -eq 0 ]; then
-      printf "Success.\\n" >> ${RUN_LOG}
+      printf "$log_pref Success.\\n" >> ${RUN_LOG}
       env printf "${GREENBG} ${CHECK} ${NORMAL}\\n"
       return 0
     else
-      printf "Failed with error: ${res}\\n" >> ${RUN_LOG}
+      printf "$log_pref Failed with error: ${res}\\n" >> ${RUN_LOG}
       env printf "${REDBG} ${BALLOT_X} ${NORMAL}\\n"
       if [ "$RUN_ERRORS_FATAL" ]; then
         echo
@@ -380,11 +387,11 @@ run_ok () {
     fi
   else
     if [ $res -eq 0 ]; then
-      printf "Success.\\n" >> ${RUN_LOG}
+      printf "$log_pref Success.\\n" >> ${RUN_LOG}
       env printf "${GREENBG} OK ${NORMAL}\\n"
       return 0
     else
-      printf "Failed with error: ${res}\\n" >> ${RUN_LOG}
+      printf "$log_pref Failed with error: ${res}\\n" >> ${RUN_LOG}
       env printf "${REDBG} ER ${NORMAL}\\n"
       if [ "$RUN_ERRORS_FATAL" ]; then
         log_fatal "Something went wrong with the previous command. Exiting."
