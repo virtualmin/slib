@@ -380,7 +380,7 @@ run_ok () {
         echo
         log_fatal "Something went wrong. Exiting."
         log_fatal "The last few log entries were:"
-        tail -15 ${RUN_LOG}
+        tail -17 "${RUN_LOG}" | head -15
         exit 1
       fi
       return ${res}
