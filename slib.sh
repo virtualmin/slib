@@ -366,7 +366,7 @@ run_ok () {
       env printf "${GREENBG} ${CHECK} ${NORMAL}\\n"
       return 0
     else
-      log_error "Failed with error: ${res}"
+      printf "Failed with error: ${res}\\n" >> ${RUN_LOG}
       env printf "${REDBG} ${BALLOT_X} ${NORMAL}\\n"
       if [ "$RUN_ERRORS_FATAL" ]; then
         echo
