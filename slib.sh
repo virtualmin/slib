@@ -10,6 +10,7 @@
 cleanup () {
   exit_code=$1
   stty echo
+  echo
   # Make super duper sure we reap all the spinners
   # This is ridiculous, and I still don't know why spinners stick around.
   if [ -n "$allpids" ]; then
@@ -345,6 +346,7 @@ run_ok () {
   CHECK='\u2714'
   BALLOT_X='\u2718'
   if [ "${INTERACTIVE_MODE}" != "off" ];then
+    stty -echo
     spinner &
     spinpid=$!
     allpids="$allpids $spinpid"
@@ -356,6 +358,7 @@ run_ok () {
   env sleep .4 # It's possible to have a race for stdout and spinner clobbering the next bit
   # Just in case the spinner survived somehow, kill it.
   if [ "${INTERACTIVE_MODE}" != "off" ];then
+    stty echo
     pidcheck=$(ps --no-headers ${spinpid})
     if [ -n "$pidcheck" ]; then
       echo "$log_pref Made it here...why?" >> ${RUN_LOG}
