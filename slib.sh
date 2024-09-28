@@ -7,6 +7,11 @@
 # slog logging library Copyright Fred Palmer and Joe Cooper
 # Licensed under the BSD 3 clause license
 #------------------------------------------------------------------------------
+
+restore_cursor () {
+  tput cnorm
+}
+
 cleanup () {
   exit_code=$1
   stty echo 1>/dev/null 2>&1
@@ -19,7 +24,7 @@ cleanup () {
     done
     tput sgr0
   fi
-  tput cnorm
+  restore_cursor
   if [ -n "$VIRTUALMIN_INSTALL_TEMPDIR" ]; then
     if echo "$VIRTUALMIN_INSTALL_TEMPDIR" | grep -q "virtualmin-"; then
       rm -rf $VIRTUALMIN_INSTALL_TEMPDIR
@@ -231,6 +236,9 @@ SPINNER_SYMBOLS="WIDE_ASCII_PROG" # Name of the variable containing the symbols.
 SPINNER_CLEAR=1 # Blank the line when done.
 
 spinner () {
+  # Add this trap to make sure the spinner is terminated and the cursor
+  # is restored, when the script is either finished or killed.
+  trap 'restore_cursor; exit' INT QUIT TERM EXIT
   # Safest option are one of these. Doesn't need Unicode, at all.
   local WIDE_ASCII_PROG="[>-] [->] [--] [--]"
   local WIDE_UNI_GREYSCALE2="▒▒▒ █▒▒ ██▒ ███ ▒██ ▒▒█ ▒▒▒"
@@ -281,7 +289,7 @@ spinner () {
     done
   done
   tput rc
-  tput cnorm
+  restore_cursor
   return 0
 }
 
@@ -365,7 +373,7 @@ run_ok () {
       kill $spinpid 2>/dev/null
       rm -rf ${SPINNER_DONEFILE} 2>/dev/null 2>&1
       tput rc
-      tput cnorm
+      restore_cursor
     fi
   fi
   # Log what we were supposed to be running
