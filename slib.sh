@@ -477,8 +477,14 @@ setconfig () {
 # Detect the primary IP address
 # works across most Linux and FreeBSD (maybe)
 detect_ip () {
-  defaultdev=$(ip ro ls|grep default|head -1|sed -e 's/.*\sdev\s//g'|awk '{print $1}')
-  primaryaddr=$(ip -f inet addr show dev "$defaultdev" | grep 'inet ' | awk '{print $2}' | head -1 | cut -d"/" -f1 | cut -f1)
+  # Interface detection
+  defaultdev=$(ip ro ls 2>>"${RUN_LOG}" | grep default | head -1 | sed -e 's/.*\sdev\s//g' | awk '{print $1}')
+  # IPv4
+  primaryaddr=$(ip -f inet addr show dev "$defaultdev" 2>>"${RUN_LOG}" | grep 'inet ' | awk '{print $2}' | head -1 | cut -d"/" -f1 | cut -f1)
+  # IPv6 only?
+  if [ -z "$primaryaddr" ]; then
+      primaryaddr=$(ip -f inet6 addr show dev "$defaultdev" 2>>"${RUN_LOG}" | grep 'inet6 ' | awk '{print $2}' | head -1 | cut -d"/" -f1 | cut -f1)
+  fi
   if [ "$primaryaddr" ]; then
     log_debug "Primary address detected as $primaryaddr"
     address=$primaryaddr
@@ -489,11 +495,19 @@ detect_ip () {
     stty echo 1>/dev/null 2>&1
     read -r primaryinterface
     stty -echo 1>/dev/null 2>&1
-    #primaryaddr=`/sbin/ifconfig $primaryinterface|grep 'inet addr'|cut -d: -f2|cut -d" " -f1`
-    primaryaddr=$(/sbin/ip -f inet -o -d addr show dev "$primaryinterface" | head -1 | awk '{print $4}' | head -1 | cut -d"/" -f1)
+    # IPv4
+    primaryaddr=$(/sbin/ip -f inet -o -d addr show dev "$primaryinterface" 2>>"${RUN_LOG}" | head -1 | awk '{print $4}' | head -1 | cut -d"/" -f1)
+    # IPv6 only?
+    if [ -z "$primaryaddr" ]; then
+      primaryaddr=$(/sbin/ip -f inet6 -o -d addr show dev "$primaryinterface" 2>>"${RUN_LOG}" | head -1 | awk '{print $4}' | head -1 | cut -d"/" -f1)
+    fi
     if [ "$primaryaddr" = "" ]; then
-      # Try again with FreeBSD format
-      primaryaddr=$(/sbin/ifconfig "$primaryinterface"|grep 'inet' | awk '{ print $2 }')
+      # FreeBSD (IPv4)
+      primaryaddr=$(/sbin/ifconfig "$primaryinterface" 2>>"${RUN_LOG}" | grep 'inet' | awk '{ print $2 }')
+      # FreeBSD IPv6 only?
+      if [ -z "$primaryaddr" ]; then
+        primaryaddr=$(/sbin/ifconfig "$primaryinterface" 2>>"${RUN_LOG}" | grep 'inet6' | awk '{ print $2 }')
+      fi
     fi
     if [ "$primaryaddr" ]; then
       log_debug "Primary address detected as $primaryaddr"
