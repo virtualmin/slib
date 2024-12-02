@@ -479,6 +479,12 @@ setconfig () {
 detect_ip () {
   # Interface detection
   defaultdev=$(ip ro ls 2>>"${RUN_LOG}" | grep default | head -1 | sed -e 's/.*\sdev\s//g' | awk '{print $1}')
+  # No default route: isolated or internal-only system?
+  if [ -z "$defaultdev" ]; then
+    log_warning "No default route detected. Cannot determine primary interface."
+    log_warning "Extracting the name of the first active network interface that is not the loopback!"
+    defaultdev=$(ip -o link show 2>>"${RUN_LOG}" | awk -F': ' '/state UP/ && !/LOOPBACK/ {print $2}' | head -1)
+  fi
   # IPv4
   primaryaddr=$(ip -f inet addr show dev "$defaultdev" 2>>"${RUN_LOG}" | grep 'inet ' | awk '{print $2}' | head -1 | cut -d"/" -f1 | cut -f1)
   # IPv6 only?
