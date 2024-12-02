@@ -479,7 +479,11 @@ setconfig () {
 detect_ip () {
   # Interface detection
   defaultdev=$(ip ro ls 2>>"${RUN_LOG}" | grep default | head -1 | sed -e 's/.*\sdev\s//g' | awk '{print $1}')
-  # No default route: isolated or internal-only system?
+  # IPv6 only?
+  if [ -z "$defaultdev" ]; then
+    defaultdev=$(ip -6 ro ls 2>>"${RUN_LOG}" | grep default | head -1 | sed -e 's/.*\sdev\s//g' | awk '{print $1}')
+  fi
+  # No default route at all: isolated or internal-only system?
   if [ -z "$defaultdev" ]; then
     log_warning "No default route detected. Cannot determine primary interface."
     log_warning "Extracting the name of the first active network interface that is not the loopback!"
