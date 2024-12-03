@@ -2,8 +2,8 @@
 # shellcheck disable=SC3043 disable=SC2086 disable=SC2059 disable=SC2039 disable=SC2034 disable=SC2317
 #------------------------------------------------------------------------------
 # Utility function library for Virtualmin installation scripts
-# slib v1.1.0 (https://github.com/virtualmin/slib)
-# Copyright 2017-2024 Joe Cooper
+# slib v1.1.1 (https://github.com/virtualmin/slib)
+# Copyright 2017-2025 Joe Cooper
 # slog logging library Copyright Fred Palmer and Joe Cooper
 # Licensed under the BSD 3 clause license
 #------------------------------------------------------------------------------
