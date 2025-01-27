@@ -72,12 +72,27 @@ if command -pv 'tput' > /dev/null; then
       CYANBG=$(tput setab 6)
       WHITEBG=$(tput setab 7)
 
-      # Do we have support
-      # for bright colors?
+      # Do we have support for bright colors?
       if [ "$ncolors" -ge 16 ]; then
         BLACK="$(tput setaf 16)"
         WHITE=$(tput setaf 15)
         WHITEBG=$(tput setab 15)
+      fi
+
+      # Do we have support for 256 colors to make it more readable?
+      if [ "$ncolors" -ge 256 ]; then
+        RED=$(tput setaf 124)
+        GREEN=$(tput setaf 42)
+        YELLOW=$(tput setaf 186)
+        BLUE=$(tput setaf 25)
+        MAGENTA=$(tput setaf 90)
+        CYAN=$(tput setaf 45)
+        WHITE=$(tput setaf 255)
+        REDBG=$(tput setab 160)
+        YELLOWBG=$(tput setab 186)
+        BLUEBG=$(tput setab 25)
+        MAGENTABG=$(tput setab 90)
+        CYANBG=$(tput setab 45)
       fi
 
       BOLD=$(tput bold)
@@ -382,11 +397,11 @@ run_ok () {
   if shell_has_unicode; then
     if [ $res -eq 0 ]; then
       printf "$log_pref Success.\\n" >> ${RUN_LOG}
-      env printf "${GREENBG} ${CHECK} ${NORMAL}\\n"
+      env printf "${GREENBG}${WHITE} ${CHECK} ${NORMAL}\\n"
       return 0
     else
       printf "$log_pref Failed with error: ${res}\\n" >> ${RUN_LOG}
-      env printf "${REDBG} ${BALLOT_X} ${NORMAL}\\n"
+      env printf "${REDBG}${WHITE} ${BALLOT_X} ${NORMAL}\\n"
       if [ "$RUN_ERRORS_FATAL" ]; then
         echo
         log_fatal "Something went wrong. Exiting."
