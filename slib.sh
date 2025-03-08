@@ -25,11 +25,14 @@ cleanup () {
     tput sgr0
   fi
   restore_cursor
-  if [ -n "$VIRTUALMIN_INSTALL_TEMPDIR" ]; then
-    if echo "$VIRTUALMIN_INSTALL_TEMPDIR" | grep -q "virtualmin-"; then
-      rm -rf $VIRTUALMIN_INSTALL_TEMPDIR
+  # Clean any env dirs
+  env | grep '_INSTALL_TEMPDIR=' | while IFS='=' read -r var temp_dir; do
+    [ -z "$temp_dir" ] && continue
+    prefix="${var%%_INSTALL_TEMPDIR}"
+    if [ -d "$temp_dir" ] && echo "$temp_dir" | grep -iq "${prefix}-"; then
+      rm -rf "$temp_dir"
     fi
-  fi
+  done
 
   if [ "$exit_code" -ne 0 ]; then
     echo
