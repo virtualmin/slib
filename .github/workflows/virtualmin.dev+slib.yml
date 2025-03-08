@@ -1,4 +1,4 @@
-name: "cloudmin.dev: virtualmin/slib"
+name: "virtualmin.dev: virtualmin/slib"
 
 on:
   push:
@@ -36,7 +36,7 @@ jobs:
       - name: Set timezone
         run: sudo timedatectl set-timezone ${{ env.TZ }}
 
-      - name: Build packages
+      - name: Upload file
         env:
           CLOUD__GPG_PH: ${{ secrets.DEV_GPG_PH }}
           CLOUD__IP_ADDR: ${{ secrets.DEV_IP_ADDR }}
@@ -57,3 +57,4 @@ jobs:
 
           # Upload and sign
           upload_list=("slib.sh")
+          cloud_upload upload_list
