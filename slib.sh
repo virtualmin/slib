@@ -1,7 +1,7 @@
 #!/bin/sh
 # shellcheck disable=SC3043 disable=SC2086 disable=SC2059 disable=SC2039 disable=SC2034 disable=SC2317
 #------------------------------------------------------------------------------
-# Utility function library for Virtualmin installation scripts
+# Utility function library for installation scripts
 # slib v1.1.2 (https://github.com/virtualmin/slib)
 # Copyright 2017-2025 Joe Cooper
 # slog logging library Copyright Fred Palmer and Joe Cooper
@@ -448,7 +448,6 @@ yesno () {
   if [ "$NONINTERACTIVE" = "1" ]; then
     echo "Non-interactive shell detected. Cannot continue, as the script may need to ask questions."
     echo "If you're running this from a script and want to install with default options, use '--force'."
-    echo "Never run this script on a system already running Virtualmin."
     return 1
   fi
   stty echo 1>/dev/null 2>&1
@@ -551,7 +550,7 @@ detect_ip () {
 
 # Set the hostname in cloud-init
 set_hostname_cloud () {
-  # If cloud-init is installed, preserve the hostname Virtualmin sets
+  # If cloud-init is installed, preserve the hostname
   if [ -f "/etc/cloud/cloud.cfg" ]; then
     if grep "^preserve_hostname: false" /etc/cloud/cloud.cfg >/dev/null; then
       log_debug "Setting preserve_hostname to true in /etc/cloud/cloud.cfg"
@@ -713,7 +712,7 @@ get_distro () {
 memory_ok () {
   min_mem=$1
   disk_space_required=$2
-  # If Virtualmin swap hasn't been setup yet, try doing it
+  # If swap hasn't been setup yet, try doing it
   is_swap=$(swapon -s|grep /swap.vm)
   if [ -n "$is_swap" ]; then
     if [ -z "$min_mem" ]; then
