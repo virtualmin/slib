@@ -38,8 +38,16 @@ cleanup () {
   exit $exit_code
 }
 
+# Check for interactive shell
+INTERACTIVE_MODE="on"
+[ -z "${NONINTERACTIVE-}" ] && NONINTERACTIVE=0      # Set only if unset
+if [ ! -t 0 ] && [ -z "${PS1-}" ]; then
+    INTERACTIVE_MODE="off"
+    [ -z "${NONINTERACTIVE-}" ] && NONINTERACTIVE=1  # Only set if unset
+fi
+
 # This tries to catch any exit, whether normal or forced (e.g. Ctrl-C)
-if [ "${INTERACTIVE_MODE}" != "off" ]; then
+if [ "$INTERACTIVE_MODE" != "off" ]; then
   trap 'cleanup 2' INT
   trap 'cleanup 3' QUIT
   trap 'cleanup 15' TERM
@@ -144,7 +152,7 @@ SCRIPT_NAME="${SCRIPT_NAME##/*/}"
 
 #--------------------------------------------------------------------------------------------------
 # Begin Logging Section
-if [ "${INTERACTIVE_MODE}" = "off" ]
+if [ "$INTERACTIVE_MODE" = "off" ]
 then
     # Then we don't care about log colors
     LOG_DEFAULT_COLOR=""
@@ -350,7 +358,7 @@ run_ok () {
   local log_pref
   log_pref="$(log_date "INFO")"
   local columns
-  if [ "${INTERACTIVE_MODE}" != "off" ];then
+  if [ "$INTERACTIVE_MODE" != "off" ];then
     columns=$(tput cols)
     if [ "$columns" -ge 80 ]; then
       columns=79
@@ -368,7 +376,7 @@ run_ok () {
   # Unicode checkmark and x mark for run_ok function
   CHECK='\u2714'
   BALLOT_X='\u2718'
-  if [ "${INTERACTIVE_MODE}" != "off" ];then
+  if [ "$INTERACTIVE_MODE" != "off" ];then
     stty -echo 1>/dev/null 2>&1
     spinner &
     spinpid=$!
@@ -380,7 +388,7 @@ run_ok () {
   touch ${SPINNER_DONEFILE}
   env sleep .4 # It's possible to have a race for stdout and spinner clobbering the next bit
   # Just in case the spinner survived somehow, kill it.
-  if [ "${INTERACTIVE_MODE}" != "off" ];then
+  if [ "$INTERACTIVE_MODE" != "off" ];then
     stty echo 1>/dev/null 2>&1
     pidcheck=$(ps --no-headers ${spinpid})
     if [ -n "$pidcheck" ]; then
@@ -435,9 +443,6 @@ yesno () {
   # XXX skipyesno is a global set in the calling script
   # shellcheck disable=SC2154
   if [ "$skipyesno" = "1" ]; then
-    return 0
-  fi
-  if [ "$VIRTUALMIN_NONINTERACTIVE" = "1" ]; then
     return 0
   fi
   if [ "$NONINTERACTIVE" = "1" ]; then
