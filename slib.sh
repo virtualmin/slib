@@ -71,6 +71,7 @@ if command -pv 'tput' > /dev/null; then
       RED=$(tput setaf 1)
       GREEN=$(tput setaf 2)
       YELLOW=$(tput setaf 3)
+      ORANGE=$(tput setaf 3)
       BLUE=$(tput setaf 4)
       MAGENTA=$(tput setaf 5)
       CYAN=$(tput setaf 6)
@@ -78,6 +79,7 @@ if command -pv 'tput' > /dev/null; then
       REDBG=$(tput setab 1)
       GREENBG=$(tput setab 2)
       YELLOWBG=$(tput setab 3)
+      ORANGEBG=$(tput setab 3)
       BLUEBG=$(tput setab 4)
       MAGENTABG=$(tput setab 5)
       CYANBG=$(tput setab 6)
@@ -95,11 +97,13 @@ if command -pv 'tput' > /dev/null; then
         GREEN=$(tput setaf 42)
         YELLOW=$(tput setaf 186)
         BLUE=$(tput setaf 25)
+        ORANGE=$(tput setaf 202)
         MAGENTA=$(tput setaf 90)
         CYAN=$(tput setaf 45)
         WHITE=$(tput setaf 255)
         REDBG=$(tput setab 160)
         YELLOWBG=$(tput setab 186)
+        ORANGEBG=$(tput setab 166)
         BLUEBG=$(tput setab 25)
         MAGENTABG=$(tput setab 90)
         CYANBG=$(tput setab 45)
@@ -116,6 +120,7 @@ else
   RED=''
   GREEN=''
   YELLOW=''
+  ORANGE=''
   BLUE=''
   MAGENTA=''
   CYAN=''
@@ -123,6 +128,7 @@ else
   REDBG=''
   GREENBG=''
   YELLOWBG=''
+  ORANGEBG=''
   BLUEBG=''
   MAGENTABG=''
   CYANBG=''
