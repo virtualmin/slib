@@ -45,7 +45,8 @@ jobs:
           CLOUD__IP_ADDR: ${{ secrets.DEV_IP_ADDR }}
           CLOUD__IP_KNOWN_HOSTS: ${{ secrets.DEV_IP_KNOWN_HOSTS }}
           CLOUD__UPLOAD_SSH_USER: ${{ secrets.DEV_UPLOAD_SSH_USER }}
-          CLOUD__UPLOAD_SSH_DIR: ${{ env.IS_RELEASE == 'true' && secrets.PRERELEASE_UPLOAD_SSH_DIR || secrets.DEV_UPLOAD_SSH_DIR }}
+          CLOUD__UPLOAD_SSH_DIR_VM: ${{ env.IS_RELEASE == 'true' && secrets.PRERELEASE_UPLOAD_SSH_DIR_VM || secrets.DEV_UPLOAD_SSH_DIR_VM }}
+          CLOUD__UPLOAD_SSH_DIR_CM: ${{ env.IS_RELEASE == 'true' && secrets.PRERELEASE_UPLOAD_SSH_DIR_CM || secrets.DEV_UPLOAD_SSH_DIR_CM }}
           CLOUD__SSH_PRV_KEY: ${{ secrets.DEV_SSH_PRV_KEY }}
           CLOUD__SIGN_BUILD_REPOS_CMD: ${{ secrets.DEV_SIGN_BUILD_REPOS_CMD }}
         run: |-
@@ -76,7 +77,14 @@ jobs:
           slib_full_name="slib-$pkg_version.sh"
           cp -p slib.sh "$slib_full_name"
 
-          # Delete previous versions and upload new files
+          # Delete previous versions and upload new files (Virtualmin)
+          export CLOUD_UPLOAD_SSH_DIR=$CLOUD__UPLOAD_SSH_DIR_VM
+          upload_list=("slib.sh" "$slib_full_name")
+          delete_list=("$CLOUD_UPLOAD_SSH_DIR slib * *sh")
+          cloud_upload upload_list delete_list
+
+          # Delete previous versions and upload new files (Cloudmin)
+          export CLOUD_UPLOAD_SSH_DIR=$CLOUD__UPLOAD_SSH_DIR_CM
           upload_list=("slib.sh" "$slib_full_name")
           delete_list=("$CLOUD_UPLOAD_SSH_DIR slib * *sh")
           cloud_upload upload_list delete_list
