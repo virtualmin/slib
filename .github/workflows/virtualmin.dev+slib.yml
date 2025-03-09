@@ -60,14 +60,12 @@ jobs:
           fi
           
           # Set testing flag and build number for non-release builds
-          echo "pkg_version tag: $pkg_version"
           if [ "${{ env.IS_RELEASE }}" = "false" ]; then
             testing="--testing"
             testing_build_number=".$(date +%Y%m%d%H%M)"
             if [[ "$pkg_version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
               pkg_version=$(echo "$pkg_version" | cut -d. -f1,2)
               pkg_version="$pkg_version$testing_build_number"
-              echo "pkg_version dev: $pkg_version"
             fi
           fi
 
@@ -80,5 +78,5 @@ jobs:
 
           # Upload and sign
           upload_list=("$slib_full_name")
-          delete_list=("$CLOUD_UPLOAD_SSH_DIR slib * [-_][0-9]*)
+          delete_list=("$CLOUD_UPLOAD_SSH_DIR slib * [-_][0-9]*")
           cloud_upload upload_list delete_list
