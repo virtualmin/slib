@@ -36,6 +36,10 @@ jobs:
       - name: Set timezone
         run: sudo timedatectl set-timezone ${{ env.TZ }}
 
+      - name: Set version
+        id: set_version
+        run: |
+          echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
       - name: Upload file
         env:
           CLOUD__GPG_PH: ${{ secrets.DEV_GPG_PH }}
@@ -45,16 +49,30 @@ jobs:
           CLOUD__UPLOAD_SSH_DIR: ${{ env.IS_RELEASE == 'true' && secrets.PRERELEASE_UPLOAD_SSH_DIR || secrets.DEV_UPLOAD_SSH_DIR }}
           CLOUD__SSH_PRV_KEY: ${{ secrets.DEV_SSH_PRV_KEY }}
           CLOUD__SIGN_BUILD_REPOS_CMD: ${{ secrets.DEV_SIGN_BUILD_REPOS_CMD }}
+          VERSION: ${{ env.VERSION }}
         run: |-
 
           set -euo pipefail
 
           # Check testing flag
           testing=$([[ "${{ env.IS_RELEASE }}" == "false" ]] && echo "--testing" || echo "")
+          pkg_version="${{ env.VERSION }}"
+          echo "pkg_version tag: $pkg_version"
+          if [ "${{ env.IS_RELEASE }}" = "false" ]; then
+            testing="--testing"
+            testing_build_number=".$(date +%Y%m%d%H%M)"
+            pkg_version=$(echo "$pkg_version" | cut -d. -f1,2)
+            pkg_version="$pkg_version$testing_build_number"
+            echo "pkg_version dev: $pkg_version"
+          fi
 
           # Bootstrap build
           source bootstrap.bash "$testing"
+          
+          # Prepare build
+          mv slib.sh slib-$pkg_version.sh
 
           # Upload and sign
-          upload_list=("slib.sh")
-          cloud_upload upload_list
+          upload_list=("slib-$pkg_version.sh")
+          delete_list=("$CLOUD_UPLOAD_SSH_DIR slib * [-_][0-9]*)
+          cloud_upload upload_list delete_list
