@@ -10,8 +10,8 @@ on:
       - edited
 
 env:
-  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   GH_REPO: ${{ github.repository }}
+  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   IS_RELEASE: ${{ github.event_name == 'release' }}
 
@@ -50,28 +50,15 @@ jobs:
           CLOUD__SSH_PRV_KEY: ${{ secrets.DEV_SSH_PRV_KEY }}
           CLOUD__SIGN_BUILD_REPOS_CMD: ${{ secrets.DEV_SIGN_BUILD_REPOS_CMD }}
         run: |-
-
-          set -euo pipefail
-
-          # Get package version
-          pkg_version=$(curl -s -H "Authorization: token $GH_TOKEN" \
-            https://api.github.com/repos/$GH_REPO/releases/latest | jq -r .tag_name)
-          if [[ "$pkg_version" =~ ^v ]]; then
-            pkg_version="${pkg_version:1}"
-          fi
           
-          # Set testing flag and build number for non-release builds
-          if [ "${{ env.IS_RELEASE }}" = "false" ]; then
-            testing="--testing"
-            testing_build_number=".$(date +%Y%m%d%H%M)"
-            if [[ "$pkg_version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-              pkg_version=$(echo "$pkg_version" | cut -d. -f1,2)
-              pkg_version="$pkg_version$testing_build_number"
-            fi
-          fi
-
+          # Fail on error
+          set -euo pipefail
+          
           # Bootstrap build
-          source bootstrap.bash ${testing:-}
+          source bootstrap.bash $([[ "$IS_RELEASE" == "true" ]] || echo "--testing")
+
+          # Get package version and testing flag
+          pkg_version=$(get_remote_git_tag_version "$GH_REPO" "$GH_TOKEN" "$IS_RELEASE")
           
           # Prepare build
           slib_versioned="slib-$pkg_version.sh"
