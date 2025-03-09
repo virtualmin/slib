@@ -94,7 +94,7 @@ if command -pv 'tput' > /dev/null; then
       # Do we have support for 256 colors to make it more readable?
       if [ "$ncolors" -ge 256 ]; then
         RED=$(tput setaf 124)
-        GREEN=$(tput setaf 42)
+        GREEN=$(tput setaf 34)
         YELLOW=$(tput setaf 186)
         BLUE=$(tput setaf 25)
         ORANGE=$(tput setaf 202)
