@@ -85,7 +85,6 @@ if command -pv 'tput' > /dev/null; then
 
       # Do we have support for bright colors?
       if [ "$ncolors" -ge 16 ]; then
-        BLACK="$(tput setaf 16)"
         WHITE=$(tput setaf 15)
         WHITEBG=$(tput setab 15)
       fi
