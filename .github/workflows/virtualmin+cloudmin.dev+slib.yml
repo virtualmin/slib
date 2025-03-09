@@ -1,4 +1,4 @@
-name: "virtualmin.dev: virtualmin/slib"
+name: "virtualmin+cloudmin.dev: virtualmin/slib"
 
 on:
   push:
@@ -74,17 +74,17 @@ jobs:
           source bootstrap.bash ${testing:-}
           
           # Prepare build
-          slib_full_name="slib-$pkg_version.sh"
-          cp -p slib.sh "$slib_full_name"
+          slib_versioned="slib-$pkg_version.sh"
+          cp -p slib.sh "$slib_versioned"
 
           # Delete previous versions and upload new files (Virtualmin)
           export CLOUD_UPLOAD_SSH_DIR=$CLOUD__UPLOAD_SSH_DIR_VM
-          upload_list=("slib.sh" "$slib_full_name")
+          upload_list=("slib.sh" "$slib_versioned")
           delete_list=("$CLOUD_UPLOAD_SSH_DIR slib * *sh")
           cloud_upload upload_list delete_list
 
           # Delete previous versions and upload new files (Cloudmin)
           export CLOUD_UPLOAD_SSH_DIR=$CLOUD__UPLOAD_SSH_DIR_CM
-          upload_list=("slib.sh" "$slib_full_name")
+          upload_list=("slib.sh" "$slib_versioned")
           delete_list=("$CLOUD_UPLOAD_SSH_DIR slib * *sh")
           cloud_upload upload_list delete_list
