@@ -74,9 +74,9 @@ jobs:
           
           # Prepare build
           slib_full_name="slib-$pkg_version.sh"
-          mv slib.sh "$slib_full_name"
+          cp -p slib.sh "$slib_full_name"
 
-          # Upload and sign
-          upload_list=("$slib_full_name")
+          # Delete previous versions and upload new files
+          upload_list=("slib.sh" "$slib_full_name")
           delete_list=("$CLOUD_UPLOAD_SSH_DIR slib * *sh")
           cloud_upload upload_list delete_list
