@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.org/virtualmin/slib.svg?branch=master)](https://travis-ci.org/virtualmin/slib)
+[![Build Status](https://api.travis-ci.com/virtualmin/slib.svg?branch=master)](https://app.travis-ci.com/github/virtualmin/slib)
 
 # slib
 Library of POSIX shell functions used by Virtualmin install scripts.
