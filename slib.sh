@@ -60,6 +60,25 @@ fi
 # scolors - Color constants
 # canonical source http://github.com/swelljoe/scolors
 
+# Check if terminal is supported and set TERM to a supported one if not
+is_term_supported() {
+  term=$1
+  [ -n "$term" ] || term=dumb            # avoid empty TERM
+  tput -T "$term" cols >/dev/null 2>&1   # any capability is enough
+}
+FALLBACK_TERMS='xterm-256color xterm-color xterm vt220 ansi dumb'
+if ! is_term_supported "$TERM"; then
+  OLDTERM=$TERM
+  for alt in $FALLBACK_TERMS; do
+    if is_term_supported "$alt"; then
+      TERM=$alt
+      export TERM
+      echo "[INFO] Terminal type '$OLDTERM' not supported; switched to '$TERM'"
+      break
+    fi
+  done
+fi
+
 # do we have tput?
 if command -pv 'tput' > /dev/null; then
   # do we have a terminal?
