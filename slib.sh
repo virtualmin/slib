@@ -61,10 +61,18 @@ fi
 # canonical source http://github.com/swelljoe/scolors
 
 # Check if terminal is supported and set TERM to a supported one if not
-is_term_supported() {
+is_term_supported () {
   term=$1
   [ -n "$term" ] || term=dumb            # avoid empty TERM
-  tput -T "$term" cols >/dev/null 2>&1   # any capability is enough
+  # Tput probe
+  if command -pv tput >/dev/null 2>&1; then
+    tput -T "$term" cols >/dev/null 2>&1 && return 0 || return 1
+  fi
+  # Infocmp probe
+  if command -pv infocmp >/dev/null 2>&1; then
+    infocmp "$term" >/dev/null 2>&1 && return 0 || return 1
+  fi
+  return 1
 }
 FALLBACK_TERMS='xterm-256color xterm-color xterm vt220 ansi dumb'
 if ! is_term_supported "$TERM"; then
