@@ -77,3 +77,5 @@ jobs:
           upload_list=("slib.sh" "$slib_versioned")
           delete_list=("$CLOUD_UPLOAD_SSH_DIR slib * *sh")
           cloud_upload upload_list delete_list
+
+          cloud_sync_remote_repos
