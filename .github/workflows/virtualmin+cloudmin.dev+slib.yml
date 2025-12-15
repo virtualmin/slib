@@ -54,10 +54,9 @@ jobs:
           set -euo pipefail
           
           # Bootstrap build
-          source bootstrap.bash $([[ "$IS_RELEASE" == "true" ]] || echo "--testing") $([[ "$IS_PRERELEASE" == "true" ]] && echo "--prerelease")
           source bootstrap.bash \
-            $([[ "$IS_RELEASE" != "true" ]] && echo "--testing") \
-            $([[ "$IS_PRERELEASE" == "true" ]] && echo "--prerelease")
+            $([[ "$IS_RELEASE" == "true" ]] && echo "--release" || echo "--testing") \
+            $([[ "$IS_PRERELEASE" == "true" ]] && echo "--prerelease")  
 
           # Get package version
           pkg_version=$(get_remote_git_tag_version "$GH_REPO" "$GH_TOKEN" "$IS_RELEASE")
