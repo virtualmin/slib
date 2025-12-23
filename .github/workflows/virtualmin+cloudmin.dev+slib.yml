@@ -48,6 +48,7 @@ jobs:
           CLOUD__UPLOAD_SSH_DIR_VM: ${{ env.IS_RELEASE == 'true' && secrets.PRERELEASE_UPLOAD_SSH_DIR_VM || secrets.DEV_UPLOAD_SSH_DIR_VM }}
           CLOUD__UPLOAD_SSH_DIR_CM: ${{ env.IS_RELEASE == 'true' && secrets.PRERELEASE_UPLOAD_SSH_DIR_CM || secrets.DEV_UPLOAD_SSH_DIR_CM }}
           CLOUD__SSH_PRV_KEY: ${{ secrets.DEV_SSH_PRV_KEY }}
+          CLOUD__GPG_PH2: ${{ secrets.ALL_GPG_PH2 }}
         run: |-
           
           # Fail on error
