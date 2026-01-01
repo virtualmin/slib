@@ -78,4 +78,4 @@ jobs:
           delete_list=("$CLOUD_UPLOAD_SSH_DIR slib * *sh")
           cloud_upload upload_list delete_list
 
-          cloud_sync_remote_repos
+          cloud_sign_and_build_repos_auto virtualmin.dev
