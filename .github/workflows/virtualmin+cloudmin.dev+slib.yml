@@ -71,11 +71,11 @@ jobs:
           upload_list=("slib.sh" "$slib_versioned")
           delete_list=("$CLOUD_UPLOAD_SSH_DIR slib * *sh")
           cloud_upload upload_list delete_list
-
+          cloud_sign_and_build_repos_auto virtualmin.dev
+          
           # Delete previous versions and upload new files (Cloudmin)
           export CLOUD_UPLOAD_SSH_DIR=$CLOUD__UPLOAD_SSH_DIR_CM
           upload_list=("slib.sh" "$slib_versioned")
           delete_list=("$CLOUD_UPLOAD_SSH_DIR slib * *sh")
           cloud_upload upload_list delete_list
-
-          cloud_sign_and_build_repos_auto virtualmin.dev
+          cloud_sign_and_build_repos_auto cloudmin.dev
