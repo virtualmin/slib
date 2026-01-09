@@ -320,9 +320,8 @@ spinner () {
       fi
       local SPINNER_COLOR
       SPINNER_COLOR=$(tput setaf ${SPINNER_COLORNUM})
-      tput sc
+      printf "\033[77G"  # Move to column 77
       env printf "${SPINNER_COLOR}${c}${SPINNER_NORMAL}"
-      tput rc
       if [ -f "${SPINNER_DONEFILE}" ]; then
         if [ ${SPINNER_CLEAR} -eq 1 ]; then
           tput el
@@ -346,7 +345,6 @@ spinner () {
       fi
     done
   done
-  tput rc
   restore_cursor
   return 0
 }
@@ -392,23 +390,11 @@ run_ok () {
   local msg="${2}"
   local log_pref
   log_pref="$(log_date "INFO")"
-  local columns
-  if [ "$INTERACTIVE_MODE" != "off" ];then
-    columns=$(tput cols)
-    if [ "$columns" -ge 80 ]; then
-      columns=79
-    fi
-  else
-      columns=79
-  fi
-  # shellcheck disable=SC2004
-  COL=$((${columns}-${#msg}-3 ))
 
-  printf "%s%${COL}s" "$2"
-  # Make sure there some unicode action in the shell; there's no
-  # way to check the terminal in a POSIX-compliant way, but terms
-  # are mostly ahead of shells.
-  # Unicode checkmark and x mark for run_ok function
+  printf "%s" "$2"
+  printf "\033[K"      # Clear to end of line
+  printf "\033[77G"    # Move cursor to column 77
+
   CHECK='\u2714'
   BALLOT_X='\u2718'
   if [ "$INTERACTIVE_MODE" != "off" ];then
@@ -430,7 +416,6 @@ run_ok () {
       echo "$log_pref Made it here...why?" >> ${RUN_LOG}
       kill $spinpid 2>/dev/null
       rm -rf ${SPINNER_DONEFILE} 2>/dev/null 2>&1
-      tput rc
       restore_cursor
     fi
   fi
@@ -440,10 +425,12 @@ run_ok () {
   if shell_has_unicode; then
     if [ $res -eq 0 ]; then
       printf "$log_pref Success.\\n" >> ${RUN_LOG}
+      printf "\033[77G\033[K"  # Position and clear
       env printf "${GREENBG}${WHITE} ${CHECK} ${NORMAL}\\n"
       return 0
     else
       printf "$log_pref Failed with error: ${res}\\n" >> ${RUN_LOG}
+      printf "\033[77G\033[K"  # Position and clear
       env printf "${REDBG}${WHITE} ${BALLOT_X} ${NORMAL}\\n"
       if [ "$RUN_ERRORS_FATAL" ]; then
         echo
@@ -457,10 +444,12 @@ run_ok () {
   else
     if [ $res -eq 0 ]; then
       printf "$log_pref Success.\\n" >> ${RUN_LOG}
+      printf "\033[77G\033[K"
       env printf "${GREENBG} OK ${NORMAL}\\n"
       return 0
     else
       printf "$log_pref Failed with error: ${res}\\n" >> ${RUN_LOG}
+      printf "\033[77G\033[K"
       env printf "${REDBG} ER ${NORMAL}\\n"
       if [ "$RUN_ERRORS_FATAL" ]; then
         log_fatal "Something went wrong with the previous command. Exiting."
