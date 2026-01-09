@@ -3,7 +3,7 @@
 #------------------------------------------------------------------------------
 # Utility function library for installation scripts
 # slib v1.3.0 (https://github.com/virtualmin/slib)
-# Copyright 2017-2025 Joe Cooper
+# Copyright 2017-2026 The Virtualmin Developers
 # slog logging library Copyright Fred Palmer and Joe Cooper
 # Licensed under the BSD 3 clause license
 #------------------------------------------------------------------------------
