@@ -1,4 +1,4 @@
-name: "virtualmin+cloudmin.dev: virtualmin/slib"
+name: Build
 
 on:
   push:
