@@ -34,10 +34,6 @@ cleanup () {
     fi
   done
 
-  if [ "$exit_code" -ne 0 ]; then
-    echo
-  fi
-
   exit $exit_code
 }
 
@@ -54,7 +50,8 @@ if [ "$INTERACTIVE_MODE" != "off" ]; then
   trap 'cleanup 2' INT
   trap 'cleanup 3' QUIT
   trap 'cleanup 15' TERM
-  trap 'cleanup 0' EXIT
+  # Preserve failures, including swap-only errors, through terminal cleanup.
+  trap 'cleanup "$?"' 0
 fi
 
 # scolors - Color constants
@@ -370,6 +367,32 @@ shell_has_unicode () {
   fi
 }
 
+# Some terminals can round-trip Unicode but still render badge glyphs awkwardly.
+# Allow forcing either mode, and otherwise prefer ASCII in known-problematic
+# terminals.
+status_badges_use_unicode () {
+  case "${SLIB_STATUS_BADGES:-auto}" in
+    1|on|true|yes|unicode)
+      return 0
+      ;;
+    0|off|false|no|ascii)
+      return 1
+      ;;
+  esac
+
+  if ! shell_has_unicode; then
+    return 1
+  fi
+
+  case "${TERM_PROGRAM:-}:${TERM:-}:${GHOSTTY_BIN_DIR:-}:${GHOSTTY_RESOURCES_DIR:-}" in
+    *ghostty*)
+      return 1
+      ;;
+  esac
+
+  return 0
+}
+
 # Setup spinner with our prefs.
 SPINNER_COLORCYCLE=0
 SPINNER_COLORNUM=6
@@ -422,7 +445,7 @@ run_ok () {
   # Log what we were supposed to be running
   msg_safe=$(echo "$msg" | prepare_log_for_nonterminal)
   printf "$log_pref ${msg_safe}: " >> ${RUN_LOG}
-  if shell_has_unicode; then
+  if status_badges_use_unicode; then
     if [ $res -eq 0 ]; then
       printf "$log_pref Success.\\n" >> ${RUN_LOG}
       printf "\033[77G\033[K"  # Position and clear
@@ -731,91 +754,524 @@ get_distro () {
   return 0
 }
 
-# memory_ok - Function to check for enough memory. Will fix it, if not, by
-# adding a swap file.
-memory_ok () {
-  min_mem=$1
-  disk_space_required=$2
-  # If swap hasn't been setup yet, try doing it
-  is_swap=$(swapon -s|grep /swap.vm)
-  if [ -n "$is_swap" ]; then
-    if [ -z "$min_mem" ]; then
-      min_mem=1048576
-    fi
-    # Check the available RAM and swap
-    mem_total=$(awk '/MemTotal/ {print $2}' /proc/meminfo)
-    swap_total=$(awk '/SwapTotal/ {print $2}' /proc/meminfo)
-    all_mem=$((mem_total + swap_total))
-    swap_min=$(( 1286144 - all_mem ))
+# Versioned contract for installers that expose explicit swap controls.
+SLIB_SWAP_API=2
 
-    if [ "$swap_min" -lt '262144' ]; then
-      swap_min=262144
-    fi
+# swap_file_active [path] [proc_swaps]
+# Match the kernel pathname exactly, never a substring of another swap area.
+swap_file_active () {
+  awk -v path="${1:-/swap.vm}" 'NR > 1 && $1 == path { found = 1 }
+    END { exit found ? 0 : 1 }' "${2:-/proc/swaps}" 2>/dev/null
+}
 
-    min_mem_h=$((min_mem / 1024))
-    if [ "$all_mem" -gt "$min_mem" ]; then
-      log_debug "Memory is greater than ${min_mem_h} MB, which should be sufficient."
+# kb_size_h kb - Sizes use binary units, matching Linux memory accounting.
+kb_size_h () {
+  if [ $(($1 % 1048576)) -eq 0 ]; then
+    echo "$(($1 / 1048576)) GiB"
+  else
+    echo "$(($1 / 1024)) MiB"
+  fi
+}
+
+# swap_size_wanted all_mem mem_total usable_disk_kb
+# Automatic sizing is an installer policy, not a workload or hibernation sizing
+# rule: top up toward 8 GiB, capped by twice RAM and by available disk space.
+swap_size_wanted () {
+  if [ -n "$swapsize" ]; then
+    if [ "$3" -ge "$swapsize" ]; then echo "$swapsize"; else echo 0; fi
+    return 0
+  fi
+  wanted_size=$(( (8388608 - $1 + 1048575) / 1048576 * 1048576 ))
+  if [ "$1" -ge 8388608 ]; then echo 0; return 0; fi
+  wanted_ram_cap=$(( ($2 * 2 + 1048575) / 1048576 * 1048576 ))
+  [ "$wanted_size" -le "$wanted_ram_cap" ] || wanted_size=$wanted_ram_cap
+  if [ "$3" -ge 41943040 ]; then
+    wanted_cap=6291456
+  elif [ "$3" -ge 20971520 ]; then
+    wanted_cap=3145728
+  elif [ "$3" -ge 10485760 ]; then
+    wanted_cap=2097152
+  elif [ "$3" -ge 5242880 ]; then
+    wanted_cap=1048576
+  else
+    wanted_cap=0
+  fi
+  [ "$wanted_size" -le "$wanted_cap" ] || wanted_size=$wanted_cap
+  echo "$wanted_size"
+}
+
+# swap_fstab_check path
+# Leave administrator options intact; conflicting or duplicate records require
+# manual reconciliation before any live swap is changed.
+swap_fstab_check () {
+  awk -v path="$1" '
+    $1 == path {
+      count++
+      if ($3 != "swap" || NF < 4) bad = 1
+      n = split($4, opts, ",")
+      for (i = 1; i <= n; i++)
+        if (opts[i] == "noauto" || opts[i] ~ /^x-systemd\./) bad = 1
+    }
+    END { exit (bad || count > 1) ? 1 : 0 }
+  ' /etc/fstab
+}
+
+# swap_systemd_ordering - Btrfs serializes swap activation filesystem-wide.
+# Start our optional swap after the ordinary swap units finish, retaining the
+# normal shutdown ordering while avoiding an ordering cycle with swap.target.
+swap_systemd_ordering () {
+  cat <<'SWAP_UNIT'
+# Managed by Virtualmin: serialize Btrfs swap activation.
+[Unit]
+DefaultDependencies=no
+After=swap.target systemd-remount-fs.service
+Conflicts=umount.target
+Before=umount.target
+SWAP_UNIT
+}
+
+# swap_resume_partition major:minor
+# Only a verified swap block device is independent of our regular swapfile.
+# In particular, a Btrfs file's st_dev is not its backing block-device number.
+swap_resume_partition () {
+  [ -b "/dev/block/$1" ] || return 1
+  swap_resume_type=$(blkid -p -s TYPE -o value "/dev/block/$1" 2>/dev/null) || return 1
+  [ "$swap_resume_type" = swap ]
+}
+
+# swap_resume_conflict
+# Nonzero offsets indicate swapfile resume. Zero-offset partition resume is
+# safe only when its target is verified; unresolved or malformed data is refused.
+swap_resume_conflict () {
+  # Check every command-line occurrence without integer overflow or octal parsing.
+  if ! awk '
+    { for (i = 1; i <= NF; i++) if ($i ~ /^resume_offset=/) {
+        sub(/^resume_offset=/, "", $i)
+        if ($i !~ /^0+$/) conflict = 1
+      }
+    }
+    END { exit conflict ? 1 : 0 }
+  ' /proc/cmdline; then return 0; fi
+  if [ -e /sys/power/resume_offset ]; then
+    swap_resume_offset=$(cat /sys/power/resume_offset) || return 0
+    case "$swap_resume_offset" in ''|*[!0]*) return 0 ;; esac
+  fi
+
+  # Kernels without the resume interface have no active resume device to check.
+  [ -e /sys/power/resume ] || return 1
+  swap_resume_dev=$(cat /sys/power/resume) || return 0
+  [ "$swap_resume_dev" != '0:0' ] || return 1
+  if ! printf '%s\n' "$swap_resume_dev" | grep -Eq '^[0-9]+:[0-9]+$'; then return 0; fi
+  if swap_resume_partition "$swap_resume_dev"; then return 1; fi
+  return 0
+}
+
+# swap_plan [installation_disk_gb]
+# Read-only preflight shared by the confirmation message and the executor.
+# Only the historical /swap.vm and the dedicated Btrfs swapfile are managed.
+swap_plan () {
+  swap_action=none
+  swap_error=
+  swap_size=0
+  swap_old_size=0
+  swap_active=0
+  swap_path=/swap.vm
+  swap_reserve=${1:-1}
+  if [ -n "$setup_only" ] || [ -n "$noswap" ]; then return 0; fi
+  # Later probes such as blkid silently return nothing without root, which
+  # would otherwise be reported as an unsafe or unrecognized file.
+  if [ "$(id -u)" -ne 0 ]; then swap_error="Swap management requires root."; return 1; fi
+
+  # Validate the library API too, since callers other than the installer use it.
+  if [ -n "$swapsize" ]; then
+    case "$swapsize" in
+      *[!0-9]*|'') swap_error="Invalid swap size in KiB."; return 1 ;;
+    esac
+    swapsize=${swapsize#"${swapsize%%[!0]*}"}
+    swapsize=${swapsize:-0}
+    if [ "${#swapsize}" -gt 10 ] || [ "$swapsize" -gt 1073740800 ] ||
+       [ $((swapsize % 1024)) -ne 0 ]; then
+      swap_error="Swap size must be whole MiB, below 1 TiB."; return 1
+    fi
+  fi
+  swap_fs=$(findmnt -n -o FSTYPE -T /) || {
+    swap_error="Cannot detect the mounted root filesystem."; return 1;
+  }
+  # Include persistent references when choosing the managed pathname, so a
+  # missing file from an interrupted/earlier run can be repaired or removed.
+  swap_legacy_ref=$(awk '$1 == "/swap.vm" {print 1; exit}' /etc/fstab)
+  swap_btrfs_ref=$(awk '$1 == "/swap.virtualmin/swapfile" {print 1; exit}' /etc/fstab)
+  if [ -e /swap.virtualmin ] || [ -L /swap.virtualmin ]; then
+    if [ -L /swap.virtualmin ] || [ ! -d /swap.virtualmin ] ||
+       [ "$(stat -c '%u:%a' /swap.virtualmin)" != '0:700' ]; then
+      swap_error="Unsafe /swap.virtualmin directory; refusing to change swap."; return 1
+    fi
+  fi
+  if [ -e /swap.vm ] || [ -L /swap.vm ] || [ "$swap_legacy_ref" = 1 ]; then
+    if [ -e /swap.virtualmin/swapfile ] || [ -L /swap.virtualmin/swapfile ] ||
+       [ "$swap_btrfs_ref" = 1 ]; then
+      swap_error="Both swap locations exist; reconcile them manually."; return 1
+    fi
+  elif [ "$swap_fs" = btrfs ] || [ -d /swap.virtualmin ] || [ "$swap_btrfs_ref" = 1 ]; then
+    # A separate subvolume prevents our Btrfs swapfile from blocking root snapshots.
+    swap_path=/swap.virtualmin/swapfile
+  fi
+
+  # Automatic installation leaves an existing Virtualmin swapfile alone.
+  if [ -z "$swapsize" ] && { [ -e "$swap_path" ] || [ -L "$swap_path" ]; }; then
+    return 0
+  fi
+  if [ -e "$swap_path" ] || [ -L "$swap_path" ]; then
+    if [ -L "$swap_path" ] || [ ! -f "$swap_path" ] ||
+       [ "$(stat -c '%u:%h' "$swap_path")" != '0:1' ] ||
+       [ "$(blkid -p -s TYPE -o value "$swap_path" 2>/dev/null)" != swap ]; then
+      swap_error="Refusing to replace an unsafe or unrecognized file at $swap_path."; return 1
+    fi
+    swap_old_bytes=$(stat -c %s "$swap_path") || return 1
+    swap_old_size=$((swap_old_bytes / 1024))
+  fi
+  if swap_file_active "$swap_path"; then swap_active=1; fi
+
+  # Persist only an unambiguous, ordinary fstab entry for our pathname.
+  if [ -L /etc/fstab ] || [ ! -f /etc/fstab ] || ! swap_fstab_check "$swap_path"; then
+    swap_error="Conflicting or unsafe /etc/fstab configuration for $swap_path."; return 1
+  fi
+  # A second boot reference could survive removal or override our fstab
+  # settings. Do not take ownership of aliases or native systemd units.
+  if ! awk -v path="$swap_path" '$1 ~ /^\// && $1 != path {print $1}' /etc/fstab |
+       while IFS= read -r swap_source; do
+         swap_source=$(printf '%b' "$swap_source")
+         if [ "$(readlink -f "$swap_source")" = "$swap_path" ]; then exit 1; fi
+       done; then
+    swap_error="Another fstab entry refers to $swap_path through an alias."; return 1
+  fi
+  swap_unit=${swap_path#/}
+  swap_unit=$(printf '%s' "$swap_unit" | tr / -).swap
+  swap_order_dir="/etc/systemd/system/$swap_unit.d"
+  swap_order_file="$swap_order_dir/50-virtualmin-swap.conf"
+  for swap_unit_dir in /etc/systemd/system /run/systemd/system /usr/lib/systemd/system /lib/systemd/system; do
+    if [ -e "$swap_unit_dir/$swap_unit" ] || [ -L "$swap_unit_dir/$swap_unit" ] ||
+       [ -L "$swap_unit_dir/$swap_unit.d" ]; then
+      swap_error="Custom systemd configuration for $swap_path requires manual review."; return 1
+    fi
+    # Only our unchanged ordering drop-in can be reconciled automatically.
+    for swap_dropin in "$swap_unit_dir/$swap_unit.d/"* "$swap_unit_dir/$swap_unit.d/".[!.]* "$swap_unit_dir/$swap_unit.d/"..?*; do
+      [ -e "$swap_dropin" ] || [ -L "$swap_dropin" ] || continue
+      if [ "$swap_dropin" != "$swap_order_file" ] || [ -L "$swap_dropin" ] ||
+         [ ! -f "$swap_dropin" ] || [ "$(cat "$swap_dropin")" != "$(swap_systemd_ordering)" ]; then
+        swap_error="Custom systemd configuration for $swap_path requires manual review."; return 1
+      fi
+    done
+  done
+  swap_options=$(awk -v path="$swap_path" '$1 == path {print $4}' /etc/fstab)
+  swap_options=${swap_options:-defaults}
+  swap_old_priority=$(awk -v path="$swap_path" '$1 == path {print $5}' /proc/swaps)
+  swap_fstab_ref=$(awk -v path="$swap_path" '$1 == path {print 1; exit}' /etc/fstab)
+  if [ "$swapsize" = 0 ]; then
+    # Without a file, boot entry, or drop-in there is nothing to remove.
+    if [ ! -e "$swap_path" ] && [ ! -L "$swap_path" ] && [ "$swap_active" = 0 ] &&
+       [ "$swap_fstab_ref" != 1 ] && [ ! -e "$swap_order_file" ]; then
       return 0
+    fi
+    swap_action=remove
+  elif [ -n "$swapsize" ] && [ "$swap_old_size" -eq "$swapsize" ]; then
+    swap_action=reuse
+    swap_size=$swapsize
+  else
+    # Resize requires room for the replacement while the old file is retained.
+    # Always keep 1 GiB of headroom in addition to the installation estimate.
+    swap_avail=$(LC_ALL=C df -Pk / | awk 'NR == 2 {print $4}')
+    swap_mem=$(awk '$1 == "MemTotal:" {print $2}' /proc/meminfo)
+    swap_total=$(awk '$1 == "SwapTotal:" {print $2}' /proc/meminfo)
+    case "$swap_avail:$swap_mem:$swap_total" in
+      *[!0-9:]*|:*|*::*|*:) swap_error="Cannot read memory or disk capacity."; return 1 ;;
+    esac
+    swap_size=$(swap_size_wanted "$((swap_mem + swap_total))" "$swap_mem" \
+      "$((swap_avail - (swap_reserve + 1) * 1048576))")
+    if [ "$swap_size" -eq 0 ]; then
+      if [ -n "$swapsize" ]; then
+        swap_error="Insufficient free disk space for the replacement swap and reserved headroom."; return 1
+      fi
+      return 0
+    fi
+    swap_action=create
+    [ "$swap_old_size" -eq 0 ] || swap_action=resize
+  fi
+
+  # Replacing a file changes its resume offset. Refuse to guess whether an
+  # existing swapfile hibernation setup belongs to this particular file.
+  if [ "$swap_old_size" -gt 0 ] &&
+     { [ "$swap_action" = resize ] || [ "$swap_action" = remove ]; } &&
+     swap_resume_conflict; then
+    swap_error="Hibernation into a swapfile is configured or cannot be ruled out; resize or removal requires manual review."; return 1
+  fi
+
+  # Btrfs creation must use its native helper and a dedicated subvolume.
+  # Legacy Btrfs /swap.vm can be reused or removed but is not recreated in root.
+  if [ "$swap_action" = create ] || [ "$swap_action" = resize ]; then
+    case "$swap_fs" in
+      ext2|ext3|ext4|xfs) ;;
+      btrfs)
+        if [ "$swap_path" = /swap.vm ] ||
+           ! btrfs filesystem mkswapfile --help >/dev/null 2>&1; then
+          swap_error="Btrfs swap creation requires btrfs-progs 6.1+ and /swap.virtualmin/swapfile."; return 1
+        fi
+        if [ -d /swap.virtualmin ] &&
+           ! btrfs subvolume show /swap.virtualmin >/dev/null 2>&1; then
+          swap_error="/swap.virtualmin must be a dedicated Btrfs subvolume."; return 1
+        fi
+        ;;
+      *) swap_error="Swapfile creation is unsupported on $swap_fs."; return 1 ;;
+    esac
+  fi
+  return 0
+}
+
+# swap_size_planned [installation_disk_gb] - Compatibility with older callers.
+swap_size_planned () (
+  swap_plan "${1:-1}" || return 1
+  case "$swap_action" in create|resize) echo "$swap_size" ;; *) echo 0 ;; esac
+)
+
+# swap_plan_message - Describe the user-visible change without storage details.
+swap_plan_message () {
+  case "$swap_action" in
+    create) echo "The swap space will be created with a size of $(kb_size_h "$swap_size")." ;;
+    resize) echo "The swap space will be resized from $(kb_size_h "$swap_old_size") to $(kb_size_h "$swap_size")." ;;
+    remove) echo "The swap space previously configured by this installer will be removed." ;;
+    reuse) echo "The existing swap space of $(kb_size_h "$swap_size") will be reused." ;;
+  esac
+}
+
+# swap_can_deactivate path
+# Keep a conservative RAM margin before swapoff, which can otherwise trigger
+# memory pressure. The kernel remains the final authority if usage changes.
+swap_can_deactivate () {
+  swap_used=$(awk -v path="$1" '$1 == path {print $4}' /proc/swaps)
+  swap_available=$(awk '$1 == "MemAvailable:" {print $2}' /proc/meminfo)
+  if [ -z "$swap_used" ] || [ -z "$swap_available" ] ||
+     [ "$swap_available" -lt "$((swap_used + 262144))" ]; then
+    log_error "Insufficient available RAM to safely deactivate $1 (256 MiB reserve required)."
+    return 1
+  fi
+}
+
+# swap_write_fstab - Prepare an atomic update, preserving unrelated records and
+# existing options; nofail keeps unavailable swap from becoming a boot requirement.
+swap_write_fstab () {
+  swap_fstab_tmp=$(mktemp /etc/.fstab.virtualmin.XXXXXX) || return 1
+  swap_fstab_before=$(cksum /etc/fstab) || return 1
+  cp --preserve=all /etc/fstab "$swap_fstab_tmp" || return 1
+  awk -v path="$swap_path" -v action="$swap_action" '
+    $1 == path {
+      found = 1
+      if (action == "remove") next
+      if ($4 !~ /(^|,)nofail(,|$)/) $4 = $4 ",nofail"
+    }
+    { print }
+    END {
+      if (!found && action != "remove")
+        print path " none swap defaults,nofail 0 0"
+    }
+  ' /etc/fstab > "$swap_fstab_tmp"
+}
+
+# swap_write_ordering - Install boot ordering before publishing the fstab entry.
+# Retain existing identical content and track new files for failure cleanup.
+swap_write_ordering () {
+  if [ "$swap_fs" != btrfs ] || [ ! -d /run/systemd/system ] ||
+     [ "$swap_action" = remove ] || [ -f "$swap_order_file" ]; then return 0; fi
+  if [ ! -d "$swap_order_dir" ]; then mkdir -m 0755 "$swap_order_dir" || return 1; fi
+  swap_order_tmp=$(mktemp "$swap_order_dir/.virtualmin.XXXXXX") || return 1
+  swap_systemd_ordering > "$swap_order_tmp" && chmod 0644 "$swap_order_tmp" || return 1
+  swap_order_created=1
+  mv -f "$swap_order_tmp" "$swap_order_file"
+}
+
+# swap_commit_fstab - Do not overwrite an administrator edit made during allocation.
+swap_commit_fstab () {
+  if [ "$(cksum /etc/fstab)" != "$swap_fstab_before" ]; then
+    log_error "/etc/fstab changed during swap setup; refusing to overwrite it."
+    return 1
+  fi
+  mv -f "$swap_fstab_tmp" /etc/fstab
+}
+
+# swap_cleanup - Roll back failed live changes before removing temporary files.
+# If recovery fails, retain the old file and report its pathname for the operator.
+swap_cleanup () {
+  swap_result=$?
+  trap - 0 HUP INT TERM
+  if [ "$swap_result" -ne 0 ]; then
+    log_error "Swap operation failed; see $RUN_LOG for details."
+  fi
+  if [ "$swap_committed" != 1 ]; then
+    # A failed persistence repair must also undo activation of an existing file.
+    # Keep the file intact even if memory pressure prevents deactivation.
+    if [ "$swap_reuse_activated" = 1 ] && ! swapoff "$swap_path" >>"$RUN_LOG" 2>&1; then
+      log_error "Could not undo activation of $swap_path; the original file remains active."
+      swap_result=1
+    fi
+    if [ "$swap_new_installed" = 1 ] && swap_file_active "$swap_path"; then
+      if ! swapoff "$swap_path" >>"$RUN_LOG" 2>&1; then
+        log_error "Rollback could not deactivate $swap_path; retained $swap_backup."
+        exit 1
+      fi
+    fi
+    if [ -n "$swap_backup" ] && [ -e "$swap_backup" ]; then
+      # A failed rename can leave both names pointing to the original inode.
+      if [ "$(stat -c '%d:%i' "$swap_backup")" = "$(stat -c '%d:%i' "$swap_path" 2>/dev/null)" ]; then
+        rm -f "$swap_backup"
+      elif ! mv -f "$swap_backup" "$swap_path"; then
+        log_error "Restore $swap_path manually from $swap_backup."
+        exit 1
+      fi
+    elif [ "$swap_new_installed" = 1 ]; then
+      rm -f "$swap_path"
+    fi
+    if [ "$swap_old_off" = 1 ]; then
+      if [ "${swap_old_priority:--1}" -ge 0 ]; then
+        swap_options="$swap_options,pri=$swap_old_priority"
+      fi
+      swapon --options="$swap_options" "$swap_path" >>"$RUN_LOG" 2>&1 ||
+        log_error "Could not reactivate the original $swap_path; its contents were retained."
+    fi
+  fi
+  if [ -n "$swap_new" ] && [ -e "$swap_new" ]; then
+    # Signals can arrive after trial activation but before trial deactivation.
+    if swap_file_active "$swap_new" && ! swapoff "$swap_new" >>"$RUN_LOG" 2>&1; then
+      log_error "Temporary swap remains active at $swap_new; retained for recovery."
+      swap_result=1
     else
-      log_error "Memory is below ${min_mem_h} MB. A full installation may not be possible."
+      rm -f "$swap_new"
     fi
+  fi
+  [ -z "$swap_fstab_tmp" ] || rm -f "$swap_fstab_tmp"
+  [ -z "$swap_order_tmp" ] || rm -f "$swap_order_tmp"
+  if [ "$swap_committed" != 1 ] && [ "$swap_order_created" = 1 ]; then
+    rm -f "$swap_order_file"
+    rmdir "$swap_order_dir" 2>/dev/null || :
+  fi
+  # Delete the retained original only after both live swap and fstab succeeded.
+  if [ "$swap_committed" = 1 ] && [ -n "$swap_backup" ]; then
+    rm -f "$swap_backup" || swap_result=1
+  fi
+  exit "$swap_result"
+}
 
-    # We'll need swap, so ask and turn some on.
-    swap_min_h=$((swap_min / 1024))
-    echo
-    echo "  Your system has less than ${min_mem_h} MB of available memory and swap."
-    echo "  Installation is likely to fail, especially on Debian/Ubuntu systems (apt-get"
-    echo "  grows very large when installing large lists of packages). You could exit"
-    echo "  and re-install with the --minimal flag to install a more compact selection"
-    echo "  of packages, or we can try to create a swap file for you. To create a swap"
-    echo "  file, you'll need ${swap_min_h} MB free disk space, in addition to $disk_space_required GB of free space"
-    echo "  for packages installation."
-    echo
-    echo "  Would you like to continue? If you continue, you will be given the option to" 
-    printf "  create a swap file. (y/n) "
-    if ! yesno; then
-      return 1 # Should exit when this function returns 1
-    fi
-    echo
-    echo "  Would you like for me to try to create a swap file? This will require" 
-    echo "   at least ${swap_min_h} MB of free space, in addition to $disk_space_required GB for the"
+# swap_setup [installation_disk_gb]
+# Serialize cooperating runs, stage the entire replacement, and retain the old
+# inode until activation and boot persistence both succeed. A subshell confines
+# the lock, umask, transaction variables, and traps to this operation.
+swap_setup () (
+  if [ -n "$setup_only" ] || [ -n "$noswap" ]; then return 0; fi
+  if [ "$(id -u)" -ne 0 ]; then log_error "Swap management requires root."; return 1; fi
+  RUN_LOG=${RUN_LOG:-/dev/null}
+  umask 077
+  exec 9>/run/virtualmin-swap.lock || return 1
+  if ! flock -n 9; then log_error "Another swap operation is running."; return 1; fi
+  swap_plan "${1:-1}" || { log_error "$swap_error"; return 1; }
+  [ "$swap_action" != none ] || return 0
+  swap_new='' swap_backup='' swap_fstab_tmp='' swap_order_tmp=''
+  swap_new_installed=0 swap_old_off=0 swap_committed=0 swap_order_created=0 swap_reuse_activated=0
+  trap 'swap_cleanup' 0
+  trap 'exit 1' HUP INT TERM
+  # The preview already announced the change; record execution only in the log.
+  printf 'Swap plan: action=%s path=%s filesystem=%s size=%sKiB previous=%sKiB options=%s\n' \
+    "$swap_action" "$swap_path" "$swap_fs" "$swap_size" "$swap_old_size" "$swap_options" >>"$RUN_LOG"
+  swap_write_fstab || { log_error "Cannot prepare /etc/fstab update."; return 1; }
+  swap_write_ordering || { log_error "Cannot prepare Btrfs swap boot ordering."; return 1; }
 
-    printf "  installation. (y/n) "
-    if ! yesno; then
-      log_warning "Proceeding without creating a swap file. Installation may fail."
-      return 0
+  # A matching file only needs permission, activation, and persistence repair.
+  if [ "$swap_action" = reuse ]; then
+    chmod 0600 "$swap_path" || return 1
+    if [ "$swap_active" = 0 ]; then
+      swapon --options="$swap_options" "$swap_path" >>"$RUN_LOG" 2>&1 || return 1
+      swap_reuse_activated=1
     fi
+  elif [ "$swap_action" = remove ]; then
+    if [ "$swap_active" = 1 ]; then
+      swap_can_deactivate "$swap_path" || return 1
+      swapoff "$swap_path" >>"$RUN_LOG" 2>&1 || return 1
+      swap_old_off=1
+    fi
+    # Remove persistence before unlinking, so interruption never leaves a
+    # boot entry pointing to a deleted file.
+    swap_commit_fstab || return 1
+    swap_committed=1
+    rm -f "$swap_path" || return 1
+    if [ -f "$swap_order_file" ]; then
+      rm -f "$swap_order_file" || return 1
+      rmdir "$swap_order_dir" 2>/dev/null || :
+    fi
+  else
+    # Btrfs gets a separate subvolume; all new files start private to root.
+    if [ "$swap_path" = /swap.virtualmin/swapfile ] && [ ! -d /swap.virtualmin ]; then
+      if [ "$swap_fs" = btrfs ]; then
+        btrfs subvolume create /swap.virtualmin >>"$RUN_LOG" 2>&1 &&
+          chmod 0700 /swap.virtualmin || return 1
+      else
+        mkdir -m 0700 /swap.virtualmin || return 1
+      fi
+    fi
+    swap_new=$(mktemp "${swap_path}.new.XXXXXX") || return 1
+    if [ "$swap_fs" = btrfs ]; then
+      # The native helper insists on creating the pathname itself.
+      rm -f "$swap_new" || return 1
+      btrfs filesystem mkswapfile --size "${swap_size}K" "$swap_new" >>"$RUN_LOG" 2>&1 || return 1
+    else
+      # Writing all blocks works across the supported ext and XFS versions,
+      # including those that reject fallocate-created swapfiles with holes.
+      dd if=/dev/zero of="$swap_new" bs=1048576 count=$((swap_size / 1024)) >>"$RUN_LOG" 2>&1 &&
+        mkswap "$swap_new" >>"$RUN_LOG" 2>&1 || return 1
+    fi
+    chmod 0600 "$swap_new" || return 1
+    # Prove that the replacement can be activated before touching the old file.
+    swapon "$swap_new" >>"$RUN_LOG" 2>&1 || return 1
+    if ! swapoff "$swap_new" >>"$RUN_LOG" 2>&1; then
+      log_error "Cannot deactivate tested replacement $swap_new; retained it for recovery."
+      swap_new=
+      return 1
+    fi
+    if [ "$swap_active" = 1 ]; then
+      swap_can_deactivate "$swap_path" || return 1
+      swapoff "$swap_path" >>"$RUN_LOG" 2>&1 || return 1
+      swap_old_off=1
+    fi
+    if [ "$swap_old_size" -gt 0 ]; then
+      # A hard link retains the original inode while rename atomically puts a
+      # valid replacement at the boot pathname, without a missing-file window.
+      swap_backup="${swap_new}.old"
+      ln "$swap_path" "$swap_backup" || return 1
+    fi
+    swap_new_installed=1
+    mv -f "$swap_new" "$swap_path" || return 1
+    swapon --options="$swap_options" "$swap_path" >>"$RUN_LOG" 2>&1 || return 1
+  fi
 
-    # Check for btrfs, because it can't host a swap file safely.
-    root_fs_type=$(grep -v "^$\\|^\\s*#" /etc/fstab | awk '{print $2 " " $3}' | grep "/ " | cut -d' ' -f2)
-    if [ "$root_fs_type" = "btrfs" ]; then
-      log_fatal "Your root filesystem appears to be running btrfs. It is unsafe to create"
-      log_fatal "a swap file on a btrfs filesystem. You'll either need to use the --minimal"
-      log_fatal "installation or create a swap file manually (on some other filesystem)."
-      return 2
-    fi
+  if [ "$swap_action" != remove ]; then
+    swap_commit_fstab || return 1
+    swap_committed=1
+  fi
+  # Refresh generated units only; do not start or stop any other swap areas.
+  if [ -d /run/systemd/system ]; then
+    systemctl daemon-reload >>"$RUN_LOG" 2>&1 || {
+      log_error "Swap updated, but systemd daemon-reload failed."; return 1;
+    }
+  fi
+  printf '%s\n' 'Swap configuration updated.' >>"$RUN_LOG"
+)
 
-    # Check for enough space.
-    root_fs_avail=$(df /|grep -v Filesystem|awk '{print $4}')
-    if [ "$root_fs_avail" -lt $((swap_min + 358400)) ]; then
-      root_fs_avail_h=$((root_fs_avail / 1024))
-      log_fatal "Root filesystem only has $root_fs_avail_h MB available, which is too small."
-      log_fatal "You'll either need to use the --minimal installation of add more space to '/'."
-      return 3
-    fi
-
-    # Create a new file
-    if ! dd if=/dev/zero of=/swap.vm bs=1024 count=$swap_min 1>>${RUN_LOG} 2>&1; then
-      log_fatal "Creating swap file /swap.vm failed."
-      return 4
-    fi
-    chmod 0600 /swap.vm 1>>${RUN_LOG} 2>&1
-    mkswap /swap.vm 1>>${RUN_LOG} 2>&1
-    if ! swapon /swap.vm 1>>${RUN_LOG} 2>&1; then
-      log_fatal "Enabling swap file failed. If this is a VM, it may be prohibited by your provider."
-      return 5
-    fi
-    echo "/swap.vm          swap            swap    defaults        0 0" >> /etc/fstab
+# memory_ok minimum_kb installation_disk_gb
+# Any swap failure stops installation, even when existing memory is sufficient.
+memory_ok () {
+  if [ -n "$setup_only" ] || [ -n "$noswap" ]; then return 0; fi
+  min_mem=${1:-1048576}
+  swap_setup "${2:-1}" || return 1
+  all_mem=$(awk '$1 == "MemTotal:" || $1 == "SwapTotal:" {n += $2} END {printf "%.0f\n", n}' /proc/meminfo)
+  if [ "$all_mem" -lt "$min_mem" ]; then
+    log_error "Combined RAM and swap is below $(kb_size_h "$min_mem")."
+    return 1
   fi
   return 0
 }
