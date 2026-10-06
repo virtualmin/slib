@@ -637,19 +637,79 @@ set_hostname () {
       echo "$line" > /etc/hostname
       hostnamectl set-hostname "$line" 1>/dev/null 2>&1
       set_hostname_cloud
-      detect_ip
-      shortname=$(echo "$line" | cut -d"." -f1)
-      if grep "^$address" /etc/hosts >/dev/null; then
-        log_debug "Entry for IP $address exists in /etc/hosts."
-        log_debug "Updating with new hostname."
-        sed -i "s/^$address.*/$address $line $shortname/" /etc/hosts
-      else
-        log_debug "Adding new entry for hostname $line on $address to /etc/hosts."
-        printf "%s\\t%s\\t%s\\n" "$address" "$line" "$shortname" >> /etc/hosts
-      fi
+      # Propagate hosts-file failures so callers can stop the installation.
+      set_hosts_entry "$line" || return $?
       i=4
     fi
   done
+}
+
+# Map the primary IP address to a hostname and its short name in /etc/hosts.
+# Keep existing names as aliases. The hostname need not be fully qualified.
+# set_hosts_entry (hostname)
+set_hosts_entry () {
+  local name=$1
+  local shortname
+  local hosts_tmp
+  local hosts_status
+  local hosts_source=/etc/hosts
+  detect_ip
+  # Refuse an incomplete mapping before touching the hosts file
+  if [ -z "$name" ] || [ -z "$address" ]; then
+    log_warning "Cannot update /etc/hosts without a hostname and IP address."
+    return 1
+  fi
+  shortname=$(echo "$name" | cut -d"." -f1)
+  # A short hostname is its own short name, so do not repeat it
+  if [ "$shortname" = "$name" ]; then
+    shortname=""
+  fi
+  # Prepare the update before overwriting the file to keep its permissions
+  log_debug "Mapping hostname $name to $address in /etc/hosts."
+  hosts_tmp=$(mktemp) || {
+    log_warning "Cannot create a temporary file for updating /etc/hosts."
+    return 1
+  }
+  # An empty input lets the final write create a missing hosts file
+  [ -e "$hosts_source" ] || hosts_source=/dev/null
+  awk -v address="$address" -v name="$name" -v shortname="$shortname" '
+    # Match the address exactly, leaving Google-managed entries untouched.
+    # A separate mapping survives deletion of their marked lines.
+    $1 == address && index($0, "# Added by Google") == 0 {
+      entry = address " " name
+      # Put the short name next when it differs from the hostname
+      if (shortname != "") entry = entry " " shortname
+
+      # Keep existing names without repeating the requested names
+      comment = index($0, "#")
+      count = split(comment ? substr($0, 1, comment - 1) : $0, names)
+      for (i = 2; i <= count; i++) {
+        if (names[i] != name && names[i] != shortname)
+          entry = entry " " names[i]
+      }
+      # Preserve the inline comment after the hostname aliases
+      if (comment) entry = entry " " substr($0, comment)
+      print entry
+      found = 1
+      next
+    }
+    # Preserve lines for other addresses and standalone comments
+    { print }
+    END {
+      # Add the mapping when no entry has this exact address
+      if (!found) {
+        printf "%s\t%s", address, name
+        # A short hostname needs no duplicate alias
+        if (shortname != "") printf "\t%s", shortname
+        printf "\n"
+      }
+    }
+  ' "$hosts_source" > "$hosts_tmp" && cat "$hosts_tmp" > /etc/hosts
+  # Return the write status after removing the temporary file
+  hosts_status=$?
+  rm -f "$hosts_tmp"
+  [ "$hosts_status" = 0 ] || log_warning "Failed to update /etc/hosts for $name."
+  return "$hosts_status"
 }
 
 is_fully_qualified () {
