@@ -121,7 +121,7 @@ if command -pv 'tput' > /dev/null; then
         GREEN=$(tput setaf 34)
         YELLOW=$(tput setaf 186)
         BLUE=$(tput setaf 25)
-        ORANGE=$(tput setaf 202)
+        ORANGE=$(tput setaf 215)
         MAGENTA=$(tput setaf 90)
         CYAN=$(tput setaf 45)
         WHITE=$(tput setaf 255)
